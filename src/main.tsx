@@ -9,9 +9,11 @@ import {
   DatabaseZap,
   Gauge,
   GripVertical,
+  Info,
   Layers3,
   Pause,
   Play,
+  RotateCcw,
   Search,
   Sparkles,
   Wrench
@@ -26,9 +28,12 @@ type Concept = {
   title: string;
   summary: string;
   difficulty: Difficulty;
+  updatedAt: string;
   tokens: string[];
   stages: string[];
+  timeline: string[];
   insights: string[];
+  keywords: string[];
   controls: string[];
 };
 
@@ -46,9 +51,12 @@ const concepts: Record<string, Concept> = {
     title: "Token 逐步输出",
     summary: "观察模型如何把上下文压缩成下一步概率分布，并一次追加一个 token。",
     difficulty: "入门",
+    updatedAt: "2026-05-05",
     tokens: ["大", "语", "言", "模", "型", "会", "逐", "个", "预", "测", "下", "一", "个", "token", "。"],
     stages: ["上下文编码", "logits 计算", "采样策略", "追加 token", "刷新上下文"],
+    timeline: ["读取上下文", "计算概率", "选择 token", "写入输出", "继续下一步"],
     insights: ["每一步都只确定一个新 token。", "温度和 top-p 改变候选分布形状。", "长输出是多次局部选择累积的结果。"],
+    keywords: ["自回归解码", "概率分布", "采样策略", "逐步生成"],
     controls: ["速度", "温度", "top-p"]
   },
   "context-window": {
@@ -57,9 +65,12 @@ const concepts: Record<string, Concept> = {
     title: "上下文窗口",
     summary: "展示 prompt、历史对话和检索片段如何占用上下文预算。",
     difficulty: "入门",
+    updatedAt: "2026-05-05",
     tokens: ["系统", "指令", "用户", "问题", "历史", "消息", "检索", "片段", "回答"],
     stages: ["输入拼接", "token 计数", "截断策略", "位置编码", "响应生成"],
+    timeline: ["收集消息", "统计 token", "保留关键段", "压缩历史", "生成回答"],
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
+    keywords: ["上下文预算", "截断策略", "历史摘要", "位置编码"],
     controls: ["预算", "保留策略", "摘要开关"]
   },
   "rag-retrieval": {
@@ -68,9 +79,12 @@ const concepts: Record<string, Concept> = {
     title: "RAG 检索",
     summary: "把问题转成向量，召回相关片段，再把证据注入模型输入。",
     difficulty: "进阶",
+    updatedAt: "2026-05-05",
     tokens: ["问题", "向量化", "相似度", "召回", "重排", "拼接", "生成"],
     stages: ["query embedding", "向量检索", "重排序", "上下文注入", "带证据回答"],
+    timeline: ["理解问题", "向量召回", "片段重排", "拼接证据", "输出答案"],
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
+    keywords: ["Embedding", "向量库", "重排序", "引用链"],
     controls: ["top-k", "重排", "引用显示"]
   },
   "tool-calling": {
@@ -79,9 +93,12 @@ const concepts: Record<string, Concept> = {
     title: "工具调用",
     summary: "观察模型如何决定调用工具、传入参数，并把结果合并回回答。",
     difficulty: "深入",
+    updatedAt: "2026-05-05",
     tokens: ["计划", "选择", "工具", "生成", "参数", "执行", "读取", "结果", "回答"],
     stages: ["意图识别", "工具选择", "参数生成", "外部执行", "结果归纳"],
+    timeline: ["识别意图", "选择工具", "生成参数", "执行调用", "整合结果"],
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
+    keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"]
   },
   "attention-flow": {
@@ -90,9 +107,12 @@ const concepts: Record<string, Concept> = {
     title: "注意力流",
     summary: "把一个 token 对历史片段的关注权重可视化，帮助解释引用和指代关系。",
     difficulty: "进阶",
+    updatedAt: "2026-05-05",
     tokens: ["它", "会", "把", "相关", "上下文", "聚焦", "到", "当前", "位置"],
     stages: ["Q/K/V 投影", "相似度打分", "mask 约束", "softmax 权重", "加权汇聚"],
+    timeline: ["生成查询", "匹配键值", "应用 mask", "归一权重", "汇聚信息"],
     insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
+    keywords: ["QKV", "因果 mask", "权重热力图", "信息路由"],
     controls: ["层", "头", "权重阈值"]
   },
   "lora-adapter": {
@@ -101,9 +121,12 @@ const concepts: Record<string, Concept> = {
     title: "LoRA 适配器",
     summary: "展示低秩矩阵如何以较少参数改变模型行为，适合讲解轻量微调。",
     difficulty: "进阶",
+    updatedAt: "2026-05-05",
     tokens: ["冻", "结", "基", "座", "训", "练", "低", "秩", "适", "配", "器"],
     stages: ["冻结基座", "插入低秩矩阵", "训练增量参数", "合并或挂载", "部署推理"],
+    timeline: ["准备数据", "冻结参数", "训练适配器", "评估效果", "上线版本"],
     insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
+    keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"]
   }
 };
@@ -153,7 +176,7 @@ function App() {
   const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
   const [selectedId, setSelectedId] = useState(defaultCourses[0].conceptIds[0]);
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [query, setQuery] = useState("");
 
@@ -184,7 +207,7 @@ function App() {
 
   useEffect(() => {
     setCursor(0);
-    setIsPlaying(true);
+    setIsPlaying(false);
   }, [selectedId]);
 
   useEffect(() => {
@@ -213,6 +236,11 @@ function App() {
         return { ...course, conceptIds: nextIds };
       })
     );
+  };
+
+  const resetPlayback = () => {
+    setCursor(0);
+    setIsPlaying(false);
   };
 
   return (
@@ -290,9 +318,7 @@ function App() {
                 <span className="caption">当前概念</span>
                 <h2>{selected.title}</h2>
               </div>
-              <button className="icon-button" onClick={() => setIsPlaying((value) => !value)} aria-label={isPlaying ? "暂停" : "播放"}>
-                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-              </button>
+              <span className={isPlaying ? "status running" : "status"}>{isPlaying ? "播放中" : "待播放"}</span>
             </div>
 
             <div className="token-stream">
@@ -301,7 +327,7 @@ function App() {
                   {token}
                 </span>
               ))}
-              <span className="caret" />
+              {isPlaying && <span className="caret" />}
             </div>
 
             <div className="probability-lanes">
@@ -333,14 +359,84 @@ function App() {
             </div>
           </section>
         </div>
+
+        <section className="timeline-panel" aria-label={`${selected.title} 时间线`}>
+          <div className="panel-head">
+            <div>
+              <span className="caption">生成时间线</span>
+              <h2>老师点击播放后逐步推进</h2>
+            </div>
+          </div>
+          <div className="timeline-track">
+            {selected.timeline.map((item, index) => {
+              const isDone = index < cursor % selected.timeline.length;
+              const isCurrent = index === cursor % selected.timeline.length;
+              return (
+                <div className={`timeline-step ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}`} key={item}>
+                  <span>{index + 1}</span>
+                  <strong>{item}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </section>
 
-      <aside className="inspector" aria-label="概念详情">
-        <div className="inspector-head">
-          <span className="caption">详情</span>
+      <aside className="inspector" aria-label="场景详情">
+        <section className="scene-detail">
+          <span className="caption">场景详情</span>
           <h2>{selected.title}</h2>
-          <p>{selected.summary}</p>
-        </div>
+          <dl>
+            <div>
+              <dt>名称</dt>
+              <dd>{selected.title}</dd>
+            </div>
+            <div>
+              <dt>所属课程</dt>
+              <dd>{selectedCourse.title}</dd>
+            </div>
+            <div>
+              <dt>难度</dt>
+              <dd>
+                <span className="difficulty compact">{selected.difficulty}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>描述</dt>
+              <dd>{selected.summary}</dd>
+            </div>
+            <div>
+              <dt>关键概念</dt>
+              <dd className="keyword-list">
+                {selected.keywords.map((keyword) => (
+                  <span key={keyword}>{keyword}</span>
+                ))}
+              </dd>
+            </div>
+            <div>
+              <dt>更新时间</dt>
+              <dd>{selected.updatedAt}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="playback-card">
+          <h3>播放控制</h3>
+          <button className="play-button" onClick={() => setIsPlaying(true)}>
+            <Play size={17} />
+            播放
+          </button>
+          <div className="playback-actions">
+            <button onClick={() => setIsPlaying(false)}>
+              <Pause size={16} />
+              暂停
+            </button>
+            <button onClick={resetPlayback}>
+              <RotateCcw size={16} />
+              重置
+            </button>
+          </div>
+        </section>
 
         <section className="meter-block">
           <div className="meter-title">
@@ -370,6 +466,11 @@ function App() {
               <input type="range" min="0" max="100" defaultValue="58" />
             </label>
           ))}
+        </section>
+
+        <section className="hint-box">
+          <Info size={17} />
+          <p>进入概念页面后默认停止。老师点击播放后，token、流程和时间线会同步推进。</p>
         </section>
       </aside>
     </main>

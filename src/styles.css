@@ -258,7 +258,8 @@ h3 {
 }
 
 .demo-panel,
-.flow-panel {
+.flow-panel,
+.timeline-panel {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #dce5e8;
   border-radius: 8px;
@@ -266,11 +267,16 @@ h3 {
 }
 
 .demo-panel {
-  min-height: 600px;
+  min-height: 520px;
   padding: 22px;
 }
 
 .flow-panel {
+  padding: 22px;
+}
+
+.timeline-panel {
+  margin-top: 18px;
   padding: 22px;
 }
 
@@ -361,6 +367,30 @@ h3 {
   font-weight: 800;
 }
 
+.difficulty.compact {
+  display: inline-flex;
+  padding: 4px 8px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  color: #64727b;
+  background: #f3f7f8;
+  border: 1px solid #dce5e8;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status.running {
+  color: #0f5f59;
+  background: #e6f7ef;
+  border-color: #b9e3d0;
+}
+
 .mechanism-flow {
   display: grid;
   gap: 12px;
@@ -399,22 +429,125 @@ h3 {
   background: #0f766e;
 }
 
+.timeline-track {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  align-items: start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 8px 0 4px;
+}
+
+.timeline-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  min-width: 120px;
+  color: #7a8790;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.timeline-step::before {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  content: "";
+  background: #dce5e8;
+}
+
+.timeline-step span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: #8a98a1;
+  background: #ffffff;
+  border: 2px solid #dce5e8;
+  border-radius: 999px;
+}
+
+.timeline-step.done,
+.timeline-step.current {
+  color: #0f5f59;
+}
+
+.timeline-step.done::before,
+.timeline-step.current::before {
+  background: #84c8c1;
+}
+
+.timeline-step.done span,
+.timeline-step.current span {
+  color: #ffffff;
+  background: #0f766e;
+  border-color: #0f766e;
+}
+
+.timeline-step.current span {
+  box-shadow: 0 0 0 4px #dff4f1;
+}
+
 .inspector {
   border-width: 0 0 0 1px;
   padding: 24px 20px;
   overflow: auto;
 }
 
-.inspector-head p {
-  margin-top: 12px;
-  color: #5e6d76;
+.scene-detail h2 {
+  margin-bottom: 20px;
+}
+
+.scene-detail dl {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.scene-detail dt {
+  margin-bottom: 6px;
+  color: #7a8790;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.scene-detail dd {
+  margin: 0;
+  color: #2b3942;
   font-size: 14px;
-  line-height: 1.65;
+  line-height: 1.6;
+}
+
+.keyword-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.keyword-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  color: #43515a;
+  background: #f3f7f8;
+  border: 1px solid #dce5e8;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .meter-block,
 .insight-list,
-.control-list {
+.control-list,
+.playback-card,
+.hint-box {
   margin-top: 22px;
   padding-top: 20px;
   border-top: 1px solid #e2eaec;
@@ -447,6 +580,43 @@ h3 {
   transition: width 260ms ease;
 }
 
+.playback-card {
+  display: grid;
+  gap: 12px;
+}
+
+.play-button,
+.playback-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.play-button {
+  width: 100%;
+  color: #ffffff;
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18);
+}
+
+.playback-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.playback-actions button {
+  color: #26343d;
+  background: #ffffff;
+  border: 1px solid #dce5e8;
+}
+
 .insight-list,
 .control-list {
   display: grid;
@@ -476,6 +646,28 @@ h3 {
 
 .control-row input {
   accent-color: #0f766e;
+}
+
+.hint-box {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 16px;
+  color: #43605f;
+  background: #f2fbfa;
+  border: 1px solid #cce9e5;
+  border-radius: 8px;
+}
+
+.hint-box svg {
+  margin-top: 2px;
+  color: #0f766e;
+}
+
+.hint-box p {
+  color: #43605f;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 @keyframes blink {
@@ -520,6 +712,10 @@ h3 {
 
   .concept-grid {
     grid-template-columns: 1fr;
+  }
+
+  .timeline-track {
+    grid-template-columns: repeat(5, minmax(132px, 1fr));
   }
 }
 
