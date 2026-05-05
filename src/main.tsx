@@ -401,6 +401,7 @@ function App() {
   const currentStep = Math.min(cursor, totalSteps - 1);
   const tokenVisibleCount =
     totalSteps <= 1 ? selected.tokens.length : Math.ceil(((currentStep + 1) / totalSteps) * selected.tokens.length);
+  const playbackProgress = Math.min(100, ((currentStep + 1) / totalSteps) * 100);
   const renderer = rendererByConcept[selected.id] || "default";
   const relatedCourses = useMemo(
     () =>
@@ -836,7 +837,7 @@ function App() {
             播放进度
           </div>
           <div className="progress">
-            <div style={{ width: `${((cursor + 1) / selected.tokens.length) * 100}%` }} />
+            <div style={{ width: `${playbackProgress}%` }} />
           </div>
         </section>
 
