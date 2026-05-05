@@ -1,42 +1,48 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Activity,
   BrainCircuit,
   Check,
+  ChevronDown,
   ChevronRight,
   DatabaseZap,
-  FileUp,
   Gauge,
+  GripVertical,
   Layers3,
   Pause,
   Play,
-  Plus,
-  Route,
   Search,
-  Settings2,
   Sparkles,
-  Upload,
   Wrench
 } from "lucide-react";
 import "./styles.css";
 
-type MechanismScene = {
+type Difficulty = "入门" | "进阶" | "深入";
+
+type Concept = {
   id: string;
-  theme: string;
+  courseId: string;
   title: string;
   summary: string;
-  difficulty: "入门" | "进阶" | "深入";
+  difficulty: Difficulty;
   tokens: string[];
   stages: string[];
   insights: string[];
   controls: string[];
 };
 
-const builtInScenes: MechanismScene[] = [
-  {
+type Course = {
+  id: string;
+  title: string;
+  summary: string;
+  conceptIds: string[];
+};
+
+const concepts: Record<string, Concept> = {
+  "token-stream": {
     id: "token-stream",
-    theme: "生成机制",
+    courseId: "app-dev",
     title: "Token 逐步输出",
     summary: "观察模型如何把上下文压缩成下一步概率分布，并一次追加一个 token。",
     difficulty: "入门",
@@ -45,20 +51,9 @@ const builtInScenes: MechanismScene[] = [
     insights: ["每一步都只确定一个新 token。", "温度和 top-p 改变候选分布形状。", "长输出是多次局部选择累积的结果。"],
     controls: ["速度", "温度", "top-p"]
   },
-  {
-    id: "attention-flow",
-    theme: "表示与注意力",
-    title: "注意力流",
-    summary: "把一个 token 对历史片段的关注权重可视化，帮助解释引用和指代关系。",
-    difficulty: "进阶",
-    tokens: ["它", "会", "把", "相关", "上下文", "聚焦", "到", "当前", "位置"],
-    stages: ["Q/K/V 投影", "相似度打分", "mask 约束", "softmax 权重", "加权汇聚"],
-    insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
-    controls: ["层", "头", "权重阈值"]
-  },
-  {
+  "context-window": {
     id: "context-window",
-    theme: "上下文管理",
+    courseId: "app-dev",
     title: "上下文窗口",
     summary: "展示 prompt、历史对话和检索片段如何占用上下文预算。",
     difficulty: "入门",
@@ -67,9 +62,9 @@ const builtInScenes: MechanismScene[] = [
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
     controls: ["预算", "保留策略", "摘要开关"]
   },
-  {
+  "rag-retrieval": {
     id: "rag-retrieval",
-    theme: "增强流程",
+    courseId: "app-dev",
     title: "RAG 检索",
     summary: "把问题转成向量，召回相关片段，再把证据注入模型输入。",
     difficulty: "进阶",
@@ -78,9 +73,9 @@ const builtInScenes: MechanismScene[] = [
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
     controls: ["top-k", "重排", "引用显示"]
   },
-  {
+  "tool-calling": {
     id: "tool-calling",
-    theme: "代理与工具",
+    courseId: "app-dev",
     title: "工具调用",
     summary: "观察模型如何决定调用工具、传入参数，并把结果合并回回答。",
     difficulty: "深入",
@@ -88,55 +83,104 @@ const builtInScenes: MechanismScene[] = [
     stages: ["意图识别", "工具选择", "参数生成", "外部执行", "结果归纳"],
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
     controls: ["工具白名单", "参数校验", "重试"]
+  },
+  "attention-flow": {
+    id: "attention-flow",
+    courseId: "tuning-deploy",
+    title: "注意力流",
+    summary: "把一个 token 对历史片段的关注权重可视化，帮助解释引用和指代关系。",
+    difficulty: "进阶",
+    tokens: ["它", "会", "把", "相关", "上下文", "聚焦", "到", "当前", "位置"],
+    stages: ["Q/K/V 投影", "相似度打分", "mask 约束", "softmax 权重", "加权汇聚"],
+    insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
+    controls: ["层", "头", "权重阈值"]
+  },
+  "lora-adapter": {
+    id: "lora-adapter",
+    courseId: "tuning-deploy",
+    title: "LoRA 适配器",
+    summary: "展示低秩矩阵如何以较少参数改变模型行为，适合讲解轻量微调。",
+    difficulty: "进阶",
+    tokens: ["冻", "结", "基", "座", "训", "练", "低", "秩", "适", "配", "器"],
+    stages: ["冻结基座", "插入低秩矩阵", "训练增量参数", "合并或挂载", "部署推理"],
+    insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
+    controls: ["rank", "alpha", "dropout"]
+  }
+};
+
+const defaultCourses: Course[] = [
+  {
+    id: "app-dev",
+    title: "大模型应用开发",
+    summary: "面向应用构建、检索增强、工具调用和交互体验的核心概念。",
+    conceptIds: ["token-stream", "context-window", "rag-retrieval", "tool-calling"]
+  },
+  {
+    id: "tuning-deploy",
+    title: "大模型调优与部署",
+    summary: "面向模型理解、微调、压缩、推理服务和上线运维的核心概念。",
+    conceptIds: ["attention-flow", "lora-adapter"]
   }
 ];
 
-const iconByScene: Record<string, React.ElementType> = {
+const iconByConcept: Record<string, React.ElementType> = {
   "token-stream": Sparkles,
   "attention-flow": BrainCircuit,
   "context-window": Layers3,
   "rag-retrieval": DatabaseZap,
-  "tool-calling": Wrench
+  "tool-calling": Wrench,
+  "lora-adapter": Activity
 };
 
-function normalizeUploadedScene(input: Partial<MechanismScene>, index: number): MechanismScene {
-  return {
-    id: input.id || `custom-${Date.now()}-${index}`,
-    theme: input.theme || "自定义上传",
-    title: input.title || `上传场景 ${index + 1}`,
-    summary: input.summary || "从上传内容生成的原理展示场景。",
-    difficulty: input.difficulty || "入门",
-    tokens: Array.isArray(input.tokens) && input.tokens.length > 0 ? input.tokens.map(String) : ["自", "定", "义", "内", "容"],
-    stages: Array.isArray(input.stages) && input.stages.length > 0 ? input.stages.map(String) : ["导入", "解析", "展示"],
-    insights: Array.isArray(input.insights) && input.insights.length > 0 ? input.insights.map(String) : ["可以继续补充关键解释点。"],
-    controls: Array.isArray(input.controls) && input.controls.length > 0 ? input.controls.map(String) : ["播放"]
-  };
+function loadCourseOrder() {
+  const saved = localStorage.getItem("llm-course-order");
+  if (!saved) return defaultCourses;
+
+  try {
+    const parsed = JSON.parse(saved) as Record<string, string[]>;
+    return defaultCourses.map((course) => {
+      const validIds = (parsed[course.id] || []).filter((id) => course.conceptIds.includes(id));
+      const missingIds = course.conceptIds.filter((id) => !validIds.includes(id));
+      return { ...course, conceptIds: [...validIds, ...missingIds] };
+    });
+  } catch {
+    return defaultCourses;
+  }
 }
 
 function App() {
-  const [customScenes, setCustomScenes] = useState<MechanismScene[]>(() => {
-    const saved = localStorage.getItem("llm-mechanism-scenes");
-    return saved ? JSON.parse(saved) : [];
-  });
-  const scenes = useMemo(() => [...builtInScenes, ...customScenes], [customScenes]);
-  const [selectedId, setSelectedId] = useState(scenes[0].id);
+  const [courses, setCourses] = useState<Course[]>(loadCourseOrder);
+  const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
+  const [selectedId, setSelectedId] = useState(defaultCourses[0].conceptIds[0]);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [cursor, setCursor] = useState(0);
   const [query, setQuery] = useState("");
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [draft, setDraft] = useState(exampleJson);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selected = scenes.find((scene) => scene.id === selectedId) || scenes[0];
-  const filteredScenes = scenes.filter((scene) => {
-    const text = `${scene.theme} ${scene.title} ${scene.summary}`;
-    return text.toLowerCase().includes(query.trim().toLowerCase());
-  });
-  const themes = Array.from(new Set(filteredScenes.map((scene) => scene.theme)));
+  const selected = concepts[selectedId] || concepts[defaultCourses[0].conceptIds[0]];
+  const selectedCourse = courses.find((course) => course.id === selected.courseId) || courses[0];
+
+  const filteredCourses = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return courses;
+    return courses
+      .map((course) => ({
+        ...course,
+        conceptIds: course.conceptIds.filter((id) => {
+          const concept = concepts[id];
+          return `${course.title} ${concept.title} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
+        })
+      }))
+      .filter((course) => course.conceptIds.length > 0);
+  }, [courses, query]);
 
   useEffect(() => {
-    localStorage.setItem("llm-mechanism-scenes", JSON.stringify(customScenes));
-  }, [customScenes]);
+    const payload = courses.reduce<Record<string, string[]>>((acc, course) => {
+      acc[course.id] = course.conceptIds;
+      return acc;
+    }, {});
+    localStorage.setItem("llm-course-order", JSON.stringify(payload));
+  }, [courses]);
 
   useEffect(() => {
     setCursor(0);
@@ -151,88 +195,100 @@ function App() {
     return () => window.clearInterval(timer);
   }, [isPlaying, selected.tokens.length]);
 
-  const importScenes = (raw: string) => {
-    const parsed = JSON.parse(raw);
-    const items = Array.isArray(parsed) ? parsed : [parsed];
-    const nextScenes = items.map((item, index) => normalizeUploadedScene(item, index));
-    setCustomScenes((current) => [...nextScenes, ...current]);
-    setSelectedId(nextScenes[0].id);
-    setUploadOpen(false);
+  const toggleCourse = (courseId: string) => {
+    setExpandedCourseIds((current) =>
+      current.includes(courseId) ? current.filter((id) => id !== courseId) : [...current, courseId]
+    );
   };
 
-  const handleFile = async (file: File) => {
-    const text = await file.text();
-    setDraft(text);
-    importScenes(text);
+  const moveConcept = (courseId: string, targetId: string) => {
+    if (!draggedId || draggedId === targetId) return;
+    setCourses((currentCourses) =>
+      currentCourses.map((course) => {
+        if (course.id !== courseId || !course.conceptIds.includes(draggedId)) return course;
+
+        const nextIds = course.conceptIds.filter((id) => id !== draggedId);
+        const targetIndex = nextIds.indexOf(targetId);
+        nextIds.splice(targetIndex, 0, draggedId);
+        return { ...course, conceptIds: nextIds };
+      })
+    );
   };
 
   return (
     <main className="app-shell">
-      <aside className="sidebar" aria-label="主题导航">
+      <aside className="sidebar" aria-label="课程导航">
         <div className="brand">
           <div className="brand-mark">
             <Activity size={22} />
           </div>
           <div>
             <strong>LLM Mechanisms Visualized</strong>
-            <span>可扩展原理展示库</span>
+            <span>课程化原理展示库</span>
           </div>
         </div>
 
         <label className="search-box">
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索主题或场景" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索课程或概念" />
         </label>
 
-        <nav className="theme-list">
-          {themes.map((theme) => (
-            <section key={theme}>
-              <h2>{theme}</h2>
-              {filteredScenes
-                .filter((scene) => scene.theme === theme)
-                .map((scene) => {
-                  const Icon = iconByScene[scene.id] || Route;
-                  return (
-                    <button
-                      key={scene.id}
-                      className={`scene-link ${scene.id === selected.id ? "active" : ""}`}
-                      onClick={() => setSelectedId(scene.id)}
-                    >
-                      <Icon size={17} />
-                      <span>{scene.title}</span>
-                      <ChevronRight size={15} />
-                    </button>
-                  );
-                })}
-            </section>
-          ))}
+        <nav className="course-list">
+          {filteredCourses.map((course) => {
+            const isExpanded = expandedCourseIds.includes(course.id) || query.trim().length > 0;
+            return (
+              <section className="course-group" key={course.id}>
+                <button className="course-toggle" onClick={() => toggleCourse(course.id)}>
+                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  <span>{course.title}</span>
+                  <small>{course.conceptIds.length}</small>
+                </button>
+
+                {isExpanded && (
+                  <div className="concept-list">
+                    {course.conceptIds.map((conceptId) => {
+                      const concept = concepts[conceptId];
+                      const Icon = iconByConcept[concept.id] || Sparkles;
+                      return (
+                        <button
+                          className={`concept-link ${concept.id === selected.id ? "active" : ""}`}
+                          draggable
+                          key={concept.id}
+                          onClick={() => setSelectedId(concept.id)}
+                          onDragStart={() => setDraggedId(concept.id)}
+                          onDragEnd={() => setDraggedId(null)}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => moveConcept(course.id, concept.id)}
+                        >
+                          <GripVertical className="drag-handle" size={15} />
+                          <Icon size={17} />
+                          <span>{concept.title}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </nav>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="caption">场景</span>
+            <span className="caption">{selectedCourse.title}</span>
             <h1>{selected.title}</h1>
-          </div>
-          <div className="topbar-actions">
-            <button className="ghost-button">
-              <Settings2 size={17} />
-              设置
-            </button>
-            <button className="primary-button" onClick={() => setUploadOpen(true)}>
-              <Upload size={17} />
-              上传内容
-            </button>
+            <p>{selected.summary}</p>
           </div>
         </header>
 
-        <div className="stage-grid">
-          <section className="demo-panel" aria-label="Token 逐步输出演示">
+        <div className="concept-grid">
+          <section className="demo-panel" aria-label={`${selected.title} 演示`}>
             <div className="panel-head">
               <div>
-                <span className="caption">逐 token</span>
-                <h2>Token 逐步输出</h2>
+                <span className="caption">当前概念</span>
+                <h2>{selected.title}</h2>
               </div>
               <button className="icon-button" onClick={() => setIsPlaying((value) => !value)} aria-label={isPlaying ? "暂停" : "播放"}>
                 {isPlaying ? <Pause size={18} /> : <Play size={18} />}
@@ -258,10 +314,10 @@ function App() {
             </div>
           </section>
 
-          <section className="flow-panel" aria-label="机制流程">
+          <section className="flow-panel" aria-label={`${selected.title} 流程`}>
             <div className="panel-head">
               <div>
-                <span className="caption">场景流程</span>
+                <span className="caption">概念流程</span>
                 <h2>{selected.title}</h2>
               </div>
               <span className="difficulty">{selected.difficulty}</span>
@@ -276,32 +332,10 @@ function App() {
               ))}
             </div>
           </section>
-
-          <section className="library-panel" aria-label="场景库">
-            <div className="panel-head">
-              <div>
-                <span className="caption">可拓展内容</span>
-                <h2>主题与场景</h2>
-              </div>
-              <button className="text-button" onClick={() => setUploadOpen(true)}>
-                <Plus size={16} />
-                新增
-              </button>
-            </div>
-            <div className="scene-rail">
-              {scenes.map((scene) => (
-                <button key={scene.id} className={scene.id === selected.id ? "scene-card active" : "scene-card"} onClick={() => setSelectedId(scene.id)}>
-                  <span>{scene.theme}</span>
-                  <strong>{scene.title}</strong>
-                  <small>{scene.summary}</small>
-                </button>
-              ))}
-            </div>
-          </section>
         </div>
       </section>
 
-      <aside className="inspector" aria-label="场景详情">
+      <aside className="inspector" aria-label="概念详情">
         <div className="inspector-head">
           <span className="caption">详情</span>
           <h2>{selected.title}</h2>
@@ -338,55 +372,9 @@ function App() {
           ))}
         </section>
       </aside>
-
-      {uploadOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="上传内容">
-          <section className="upload-modal">
-            <div className="panel-head">
-              <div>
-                <span className="caption">导入 JSON</span>
-                <h2>上传内容</h2>
-              </div>
-              <button className="ghost-button" onClick={() => setUploadOpen(false)}>
-                关闭
-              </button>
-            </div>
-            <textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
-            <div className="upload-actions">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json,.json"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void handleFile(file);
-                }}
-              />
-              <button className="ghost-button" onClick={() => fileInputRef.current?.click()}>
-                <FileUp size={17} />
-                选择文件
-              </button>
-              <button className="primary-button" onClick={() => importScenes(draft)}>
-                导入场景
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
     </main>
   );
 }
-
-const exampleJson = `{
-  "theme": "自定义上传",
-  "title": "提示词路由",
-  "summary": "展示系统如何根据用户意图选择不同处理路径。",
-  "difficulty": "进阶",
-  "tokens": ["识别", "意图", "匹配", "路由", "执行", "汇总"],
-  "stages": ["分类", "选择路线", "调用模块", "生成结果"],
-  "insights": ["适合展示多代理或工作流编排。", "可把每个阶段连接到真实案例。"],
-  "controls": ["阈值", "路线权重"]
-}`;
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

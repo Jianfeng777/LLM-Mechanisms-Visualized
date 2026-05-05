@@ -19,8 +19,7 @@ body {
 }
 
 button,
-input,
-textarea {
+input {
   font: inherit;
 }
 
@@ -30,7 +29,7 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 296px minmax(0, 1fr) 330px;
+  grid-template-columns: 318px minmax(0, 1fr) 330px;
   min-height: 100vh;
   background:
     linear-gradient(180deg, rgba(28, 140, 132, 0.08), rgba(28, 140, 132, 0) 260px),
@@ -76,9 +75,7 @@ button {
 }
 
 .brand span,
-.caption,
-.scene-card span,
-.scene-card small {
+.caption {
   color: #687782;
 }
 
@@ -110,21 +107,61 @@ button {
   outline: 0;
 }
 
-.theme-list h2 {
-  margin: 22px 0 8px;
-  color: #52616b;
-  font-size: 12px;
-  font-weight: 700;
+.course-list {
+  display: grid;
+  gap: 14px;
 }
 
-.scene-link {
+.course-group {
   display: grid;
-  grid-template-columns: 20px 1fr 16px;
+  gap: 7px;
+}
+
+.course-toggle {
+  display: grid;
+  grid-template-columns: 18px 1fr 28px;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #26343d;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #dce5e8;
+  border-radius: 8px;
+}
+
+.course-toggle span {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.course-toggle small {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  color: #0f5f59;
+  background: #ebf6f5;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.concept-list {
+  display: grid;
+  gap: 5px;
+  padding-left: 6px;
+}
+
+.concept-link {
+  display: grid;
+  grid-template-columns: 16px 20px 1fr;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   min-height: 42px;
-  margin: 4px 0;
   padding: 8px 10px;
   color: #43515a;
   text-align: left;
@@ -133,11 +170,19 @@ button {
   border-radius: 8px;
 }
 
-.scene-link.active,
-.scene-link:hover {
+.concept-link.active,
+.concept-link:hover {
   color: #0f5f59;
   background: #ebf6f5;
   border-color: #c5e3df;
+}
+
+.concept-link:active {
+  cursor: grabbing;
+}
+
+.drag-handle {
+  color: #8a98a1;
 }
 
 .workspace {
@@ -146,11 +191,15 @@ button {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
   margin-bottom: 20px;
+}
+
+.topbar p {
+  max-width: 760px;
+  margin-top: 12px;
+  color: #5e6d76;
+  font-size: 15px;
+  line-height: 1.65;
 }
 
 .caption {
@@ -168,7 +217,7 @@ p {
 }
 
 h1 {
-  font-size: clamp(26px, 3vw, 42px);
+  font-size: clamp(28px, 3.3vw, 46px);
   line-height: 1.05;
 }
 
@@ -182,71 +231,34 @@ h3 {
   line-height: 1.25;
 }
 
-.topbar-actions,
-.upload-actions,
 .panel-head {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 10px;
+  margin-bottom: 20px;
 }
 
-.topbar-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.primary-button,
-.ghost-button,
-.text-button,
 .icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  width: 38px;
   min-height: 38px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.primary-button {
-  padding: 0 15px;
-  color: #ffffff;
-  background: #0f766e;
-  border: 1px solid #0f766e;
-  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.2);
-}
-
-.ghost-button,
-.text-button,
-.icon-button {
   color: #26343d;
   background: #ffffff;
   border: 1px solid #dce5e8;
+  border-radius: 8px;
 }
 
-.ghost-button,
-.text-button {
-  padding: 0 13px;
-}
-
-.icon-button {
-  width: 38px;
-}
-
-.stage-grid {
+.concept-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
-  grid-template-areas:
-    "demo flow"
-    "library library";
   gap: 18px;
 }
 
 .demo-panel,
-.flow-panel,
-.library-panel,
-.upload-modal {
+.flow-panel {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #dce5e8;
   border-radius: 8px;
@@ -254,24 +266,12 @@ h3 {
 }
 
 .demo-panel {
-  grid-area: demo;
-  min-height: 470px;
+  min-height: 600px;
   padding: 22px;
 }
 
 .flow-panel {
-  grid-area: flow;
   padding: 22px;
-}
-
-.library-panel {
-  grid-area: library;
-  padding: 20px;
-}
-
-.panel-head {
-  justify-content: space-between;
-  margin-bottom: 20px;
 }
 
 .token-stream {
@@ -279,7 +279,7 @@ h3 {
   flex-wrap: wrap;
   align-content: flex-start;
   gap: 10px;
-  min-height: 164px;
+  min-height: 238px;
   padding: 22px;
   background:
     linear-gradient(90deg, rgba(15, 118, 110, 0.06) 1px, transparent 1px),
@@ -399,40 +399,6 @@ h3 {
   background: #0f766e;
 }
 
-.scene-rail {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(210px, 1fr));
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.scene-card {
-  display: grid;
-  gap: 8px;
-  min-height: 136px;
-  padding: 15px;
-  text-align: left;
-  background: #ffffff;
-  border: 1px solid #dce5e8;
-  border-radius: 8px;
-}
-
-.scene-card.active {
-  border-color: #0f766e;
-  box-shadow: inset 0 0 0 1px #0f766e;
-}
-
-.scene-card span {
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.scene-card small {
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 .inspector {
   border-width: 0 0 0 1px;
   padding: 24px 20px;
@@ -512,40 +478,6 @@ h3 {
   accent-color: #0f766e;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(21, 33, 42, 0.32);
-}
-
-.upload-modal {
-  width: min(720px, 100%);
-  padding: 22px;
-}
-
-.upload-modal textarea {
-  width: 100%;
-  min-height: 300px;
-  padding: 14px;
-  color: #15212a;
-  background: #f8fbfb;
-  border: 1px solid #dce5e8;
-  border-radius: 8px;
-  resize: vertical;
-}
-
-.upload-actions {
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
-.upload-actions input {
-  display: none;
-}
-
 @keyframes blink {
   50% {
     opacity: 0;
@@ -565,7 +497,7 @@ h3 {
 
 @media (max-width: 1180px) {
   .app-shell {
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr);
   }
 
   .inspector {
@@ -582,26 +514,12 @@ h3 {
     border-width: 0 0 1px 0;
   }
 
-  .theme-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 8px 14px;
+  .course-list {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   }
 
-  .stage-grid {
+  .concept-grid {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "demo"
-      "flow"
-      "library";
-  }
-
-  .topbar {
-    flex-direction: column;
-  }
-
-  .topbar-actions {
-    justify-content: flex-start;
   }
 }
 
@@ -612,17 +530,12 @@ h3 {
   }
 
   .demo-panel,
-  .flow-panel,
-  .library-panel {
+  .flow-panel {
     padding: 16px;
   }
 
   .panel-head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .scene-rail {
-    grid-template-columns: 1fr;
   }
 }
