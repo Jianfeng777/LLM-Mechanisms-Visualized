@@ -46,8 +46,7 @@ const seedConcepts = [
     insights: ["每一步都只确定一个新 token。", "温度和 top-p 改变候选分布形状。", "长输出是多次局部选择累积的结果。"],
     keywords: ["自回归解码", "概率分布", "采样策略", "逐步生成"],
     controls: ["速度", "温度", "top-p"],
-    prerequisiteIds: [],
-    relatedNextIds: ["context-window", "rag-retrieval"]
+    prerequisiteIds: []
   },
   {
     id: "context-window",
@@ -62,8 +61,7 @@ const seedConcepts = [
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
     keywords: ["上下文预算", "截断策略", "历史摘要", "位置编码"],
     controls: ["预算", "保留策略", "摘要开关"],
-    prerequisiteIds: ["token-stream"],
-    relatedNextIds: ["rag-retrieval", "tool-calling"]
+    prerequisiteIds: ["token-stream"]
   },
   {
     id: "rag-retrieval",
@@ -78,8 +76,7 @@ const seedConcepts = [
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
     keywords: ["Embedding", "向量库", "重排序", "引用链"],
     controls: ["top-k", "重排", "引用显示"],
-    prerequisiteIds: ["context-window", "token-stream"],
-    relatedNextIds: ["tool-calling"]
+    prerequisiteIds: ["context-window", "token-stream"]
   },
   {
     id: "tool-calling",
@@ -94,8 +91,7 @@ const seedConcepts = [
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"],
-    prerequisiteIds: ["token-stream", "context-window"],
-    relatedNextIds: []
+    prerequisiteIds: ["token-stream", "context-window"]
   },
   {
     id: "attention-flow",
@@ -110,8 +106,7 @@ const seedConcepts = [
     insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
     keywords: ["QKV", "因果 mask", "权重热力图", "信息路由"],
     controls: ["层", "头", "权重阈值"],
-    prerequisiteIds: [],
-    relatedNextIds: ["lora-adapter"]
+    prerequisiteIds: []
   },
   {
     id: "lora-adapter",
@@ -126,8 +121,7 @@ const seedConcepts = [
     insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
-    prerequisiteIds: ["attention-flow"],
-    relatedNextIds: []
+    prerequisiteIds: ["attention-flow"]
   }
 ];
 
@@ -214,7 +208,6 @@ if (count === 0) {
 
     seedConcepts.forEach((concept) => {
       concept.prerequisiteIds.forEach((id) => insertRelation.run(concept.id, id, "prerequisite"));
-      concept.relatedNextIds.forEach((id) => insertRelation.run(concept.id, id, "next"));
     });
 
     seedCourses.forEach((course) => {
@@ -232,11 +225,7 @@ if (count === 0) {
   }
 }
 
-const removeLegacyNextRelation = db.prepare(
-  "DELETE FROM concept_relations WHERE from_concept_id = ? AND to_concept_id = ? AND relation_type = 'next'"
-);
-removeLegacyNextRelation.run("tool-calling", "rag-retrieval");
-removeLegacyNextRelation.run("lora-adapter", "attention-flow");
+db.prepare("DELETE FROM concept_relations WHERE relation_type = 'next'").run();
 
 function json(value) {
   return JSON.parse(value);
@@ -267,9 +256,6 @@ function getContent() {
         controls: json(row.controls),
         prerequisiteIds: relationRows
           .filter((relation) => relation.from_concept_id === row.id && relation.relation_type === "prerequisite")
-          .map((relation) => relation.to_concept_id),
-        relatedNextIds: relationRows
-          .filter((relation) => relation.from_concept_id === row.id && relation.relation_type === "next")
           .map((relation) => relation.to_concept_id)
       }
     ])

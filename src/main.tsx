@@ -38,7 +38,6 @@ type Concept = {
   keywords: string[];
   controls: string[];
   prerequisiteIds?: string[];
-  relatedNextIds?: string[];
 };
 
 type Chapter = {
@@ -67,8 +66,7 @@ const fallbackConcepts: Record<string, Concept> = {
     timeline: ["读取上下文", "计算概率", "选择 token", "写入输出", "继续下一步"],
     insights: ["每一步都只确定一个新 token。", "温度和 top-p 改变候选分布形状。", "长输出是多次局部选择累积的结果。"],
     keywords: ["自回归解码", "概率分布", "采样策略", "逐步生成"],
-    controls: ["速度", "温度", "top-p"],
-    relatedNextIds: ["context-window", "rag-retrieval"]
+    controls: ["速度", "温度", "top-p"]
   },
   "context-window": {
     id: "context-window",
@@ -83,8 +81,7 @@ const fallbackConcepts: Record<string, Concept> = {
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
     keywords: ["上下文预算", "截断策略", "历史摘要", "位置编码"],
     controls: ["预算", "保留策略", "摘要开关"],
-    prerequisiteIds: ["token-stream"],
-    relatedNextIds: ["rag-retrieval", "tool-calling"]
+    prerequisiteIds: ["token-stream"]
   },
   "rag-retrieval": {
     id: "rag-retrieval",
@@ -99,8 +96,7 @@ const fallbackConcepts: Record<string, Concept> = {
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
     keywords: ["Embedding", "向量库", "重排序", "引用链"],
     controls: ["top-k", "重排", "引用显示"],
-    prerequisiteIds: ["context-window", "token-stream"],
-    relatedNextIds: ["tool-calling"]
+    prerequisiteIds: ["context-window", "token-stream"]
   },
   "tool-calling": {
     id: "tool-calling",
@@ -115,8 +111,7 @@ const fallbackConcepts: Record<string, Concept> = {
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"],
-    prerequisiteIds: ["token-stream", "context-window"],
-    relatedNextIds: []
+    prerequisiteIds: ["token-stream", "context-window"]
   },
   "attention-flow": {
     id: "attention-flow",
@@ -130,8 +125,7 @@ const fallbackConcepts: Record<string, Concept> = {
     timeline: ["生成查询", "匹配键值", "应用 mask", "归一权重", "汇聚信息"],
     insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
     keywords: ["QKV", "因果 mask", "权重热力图", "信息路由"],
-    controls: ["层", "头", "权重阈值"],
-    relatedNextIds: ["lora-adapter"]
+    controls: ["层", "头", "权重阈值"]
   },
   "lora-adapter": {
     id: "lora-adapter",
@@ -146,8 +140,7 @@ const fallbackConcepts: Record<string, Concept> = {
     insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
-    prerequisiteIds: ["attention-flow"],
-    relatedNextIds: []
+    prerequisiteIds: ["attention-flow"]
   }
 };
 
@@ -247,7 +240,6 @@ function App() {
   const selectedChapter =
     selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
   const prerequisiteIds = selected.prerequisiteIds || [];
-  const relatedNextIds = selected.relatedNextIds || [];
   const totalSteps = Math.max(selected.timeline.length, selected.stages.length, 1);
   const currentStep = Math.min(cursor, totalSteps - 1);
   const tokenVisibleCount =
@@ -260,12 +252,12 @@ function App() {
           chapters: course.chapters
             .map((chapter) => ({
               ...chapter,
-              conceptIds: chapter.conceptIds.filter((conceptId) => relatedNextIds.includes(conceptId))
+              conceptIds: chapter.conceptIds.filter((conceptId) => concepts[conceptId]?.prerequisiteIds?.includes(selected.id))
             }))
             .filter((chapter) => chapter.conceptIds.length > 0)
         }))
         .filter((course) => course.chapters.length > 0),
-    [courses, relatedNextIds]
+    [concepts, courses, selected.id]
   );
 
   useEffect(() => {
