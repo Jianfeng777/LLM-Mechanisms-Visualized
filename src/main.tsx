@@ -316,14 +316,7 @@ function App() {
   useEffect(() => {
     if (!isPlaying) return;
     const timer = window.setInterval(() => {
-      setCursor((current) => {
-        if (current >= totalSteps - 1) {
-          window.clearInterval(timer);
-          setIsPlaying(false);
-          return current;
-        }
-        return current + 1;
-      });
+      setCursor((current) => (current >= totalSteps - 1 ? 0 : current + 1));
     }, 720);
     return () => window.clearInterval(timer);
   }, [isPlaying, totalSteps]);
