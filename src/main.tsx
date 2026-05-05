@@ -5,9 +5,9 @@ import {
   BrainCircuit,
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   DatabaseZap,
-  Edit3,
   Gauge,
   GripVertical,
   Info,
@@ -51,12 +51,6 @@ type Course = {
   title: string;
   summary: string;
   chapters: Chapter[];
-};
-
-type LabelOverrides = {
-  courses: Record<string, string>;
-  chapters: Record<string, string>;
-  concepts: Record<string, string>;
 };
 
 const concepts: Record<string, Concept> = {
@@ -227,25 +221,8 @@ const countCourseConcepts = (course: Course) => course.chapters.reduce((total, c
 
 const firstConceptId = defaultCourses[0].chapters[0].conceptIds[0];
 
-function loadLabelOverrides(): LabelOverrides {
-  const saved = localStorage.getItem("llm-label-overrides");
-  if (!saved) return { courses: {}, chapters: {}, concepts: {} };
-
-  try {
-    const parsed = JSON.parse(saved) as Partial<LabelOverrides>;
-    return {
-      courses: parsed.courses || {},
-      chapters: parsed.chapters || {},
-      concepts: parsed.concepts || {}
-    };
-  } catch {
-    return { courses: {}, chapters: {}, concepts: {} };
-  }
-}
-
 function App() {
   const [courses, setCourses] = useState<Course[]>(loadCourseOrder);
-  const [labelOverrides, setLabelOverrides] = useState<LabelOverrides>(loadLabelOverrides);
   const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
   const [expandedChapterIds, setExpandedChapterIds] = useState<string[]>(
     defaultCourses.flatMap((course) => course.chapters.map((chapter) => chapter.id))
@@ -261,9 +238,6 @@ function App() {
   const selectedCourse = courses.find((course) => course.id === selected.courseId) || courses[0];
   const selectedChapter =
     selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
-  const selectedTitle = labelOverrides.concepts[selected.id] || selected.title;
-  const selectedCourseTitle = labelOverrides.courses[selectedCourse.id] || selectedCourse.title;
-  const selectedChapterTitle = labelOverrides.chapters[selectedChapter.id] || selectedChapter.title;
   const prerequisiteIds = selected.prerequisiteIds || [];
 
   const filteredCourses = useMemo(() => {
@@ -277,16 +251,13 @@ function App() {
             ...chapter,
             conceptIds: chapter.conceptIds.filter((id) => {
               const concept = concepts[id];
-              const courseTitle = labelOverrides.courses[course.id] || course.title;
-              const chapterTitle = labelOverrides.chapters[chapter.id] || chapter.title;
-              const conceptTitle = labelOverrides.concepts[concept.id] || concept.title;
-              return `${courseTitle} ${chapterTitle} ${conceptTitle} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
+              return `${course.title} ${chapter.title} ${concept.title} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
             })
           }))
           .filter((chapter) => chapter.conceptIds.length > 0)
       }))
       .filter((course) => course.chapters.length > 0);
-  }, [courses, labelOverrides, query]);
+  }, [courses, query]);
 
   useEffect(() => {
     const payload = courses.reduce<Record<string, Record<string, string[]>>>((acc, course) => {
@@ -298,10 +269,6 @@ function App() {
     }, {});
     localStorage.setItem("llm-chapter-order", JSON.stringify(payload));
   }, [courses]);
-
-  useEffect(() => {
-    localStorage.setItem("llm-label-overrides", JSON.stringify(labelOverrides));
-  }, [labelOverrides]);
 
   useEffect(() => {
     setCursor(0);
@@ -354,16 +321,19 @@ function App() {
     setIsPlaying(false);
   };
 
-  const renameItem = (type: keyof LabelOverrides, id: string, currentName: string) => {
-    const nextName = window.prompt("请输入新的名称", currentName)?.trim();
-    if (!nextName) return;
-    setLabelOverrides((current) => ({
-      ...current,
-      [type]: {
-        ...current[type],
-        [id]: nextName
-      }
-    }));
+  const goToStep = (index: number) => {
+    setCursor(index);
+    setIsPlaying(false);
+  };
+
+  const stepBackward = () => {
+    setCursor((current) => (current - 1 + selected.timeline.length) % selected.timeline.length);
+    setIsPlaying(false);
+  };
+
+  const stepForward = () => {
+    setCursor((current) => (current + 1) % selected.timeline.length);
+    setIsPlaying(false);
   };
 
   return (
@@ -387,40 +357,24 @@ function App() {
         <nav className="course-list">
           {filteredCourses.map((course) => {
             const isExpanded = expandedCourseIds.includes(course.id) || query.trim().length > 0;
-            const courseTitle = labelOverrides.courses[course.id] || course.title;
             return (
               <section className="course-group" key={course.id}>
                 <button className="course-toggle" onClick={() => toggleCourse(course.id)}>
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  <span>{courseTitle}</span>
+                  <span>{course.title}</span>
                   <small>{countCourseConcepts(course)}</small>
-                </button>
-                <button
-                  className="rename-button course-rename"
-                  onClick={() => renameItem("courses", course.id, courseTitle)}
-                  aria-label={`重命名课程 ${courseTitle}`}
-                >
-                  <Edit3 size={14} />
                 </button>
 
                 {isExpanded && (
                   <div className="chapter-list">
                     {course.chapters.map((chapter) => {
                       const isChapterExpanded = expandedChapterIds.includes(chapter.id) || query.trim().length > 0;
-                      const chapterTitle = labelOverrides.chapters[chapter.id] || chapter.title;
                       return (
                         <section className="chapter-group" key={chapter.id}>
                           <button className="chapter-toggle" onClick={() => toggleChapter(chapter.id)}>
                             {isChapterExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                            <span>{chapterTitle}</span>
+                            <span>{chapter.title}</span>
                             <small>{chapter.conceptIds.length}</small>
-                          </button>
-                          <button
-                            className="rename-button chapter-rename"
-                            onClick={() => renameItem("chapters", chapter.id, chapterTitle)}
-                            aria-label={`重命名章节 ${chapterTitle}`}
-                          >
-                            <Edit3 size={13} />
                           </button>
 
                           {isChapterExpanded && (
@@ -428,7 +382,6 @@ function App() {
                               {chapter.conceptIds.map((conceptId) => {
                                 const concept = concepts[conceptId];
                                 const Icon = iconByConcept[concept.id] || Sparkles;
-                                const conceptTitle = labelOverrides.concepts[concept.id] || concept.title;
                                 return (
                                   <button
                                     className={`concept-link ${concept.id === selected.id ? "active" : ""}`}
@@ -443,18 +396,7 @@ function App() {
                                   >
                                     <GripVertical className="drag-handle" size={15} />
                                     <Icon size={17} />
-                                    <span>{conceptTitle}</span>
-                                    <span
-                                      className="inline-rename"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        renameItem("concepts", concept.id, conceptTitle);
-                                      }}
-                                      role="button"
-                                      aria-label={`重命名知识点 ${conceptTitle}`}
-                                    >
-                                      <Edit3 size={13} />
-                                    </span>
+                                    <span>{concept.title}</span>
                                   </button>
                                 );
                               })}
@@ -474,21 +416,54 @@ function App() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="caption">{selectedCourseTitle}</span>
-            <h1>{selectedTitle}</h1>
+            <span className="caption">{selectedCourse.title}</span>
+            <h1>{selected.title}</h1>
             <p>
-              {selectedChapterTitle} · {selected.summary}
+              {selectedChapter.title} · {selected.summary}
             </p>
-            {prerequisiteIds.length > 0 && (
-              <div className="prerequisite-row" aria-label="前置知识点">
+            <div className="knowledge-links" aria-label="知识点关系">
+              {prerequisiteIds.length > 0 && (
+                <div className="prerequisite-row" aria-label="前置知识点">
                 <span>前置知识点</span>
                 {prerequisiteIds.map((id) => (
                   <button key={id} onClick={() => setSelectedId(id)}>
-                    {labelOverrides.concepts[id] || concepts[id].title}
+                    {concepts[id].title}
                   </button>
                 ))}
               </div>
-            )}
+              )}
+              <div className="post-menu">
+                <button className="post-trigger">
+                  后置知识点
+                  <ChevronDown size={15} />
+                </button>
+                <div className="post-course-list">
+                  {courses.map((course) => (
+                    <div className="post-course-item" key={course.id}>
+                      <span>{course.title}</span>
+                      <ChevronRight size={14} />
+                      <div className="post-chapter-list">
+                        {course.chapters.map((chapter) => (
+                          <div className="post-chapter-item" key={chapter.id}>
+                            <span>{chapter.title}</span>
+                            <ChevronRight size={14} />
+                            <div className="post-concept-list">
+                              {chapter.conceptIds
+                                .filter((conceptId) => conceptId !== selected.id)
+                                .map((conceptId) => (
+                                  <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
+                                    {concepts[conceptId].title}
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
           <div className="topbar-actions">
             <button className="primary-button" onClick={() => setIsPlaying(true)}>
@@ -507,7 +482,7 @@ function App() {
             <div className="panel-head">
               <div>
                 <span className="caption">当前概念</span>
-                <h2>{selectedTitle}</h2>
+                <h2>{selected.title}</h2>
               </div>
               <span className={isPlaying ? "status running" : "status"}>{isPlaying ? "播放中" : "待播放"}</span>
             </div>
@@ -531,11 +506,11 @@ function App() {
             </div>
           </section>
 
-          <section className="flow-panel" aria-label={`${selectedTitle} 流程`}>
+          <section className="flow-panel" aria-label={`${selected.title} 流程`}>
             <div className="panel-head">
               <div>
                 <span className="caption">概念流程</span>
-                <h2>{selectedTitle}</h2>
+                <h2>{selected.title}</h2>
               </div>
               <span className="difficulty">{selected.difficulty}</span>
             </div>
@@ -551,7 +526,7 @@ function App() {
           </section>
         </div>
 
-        <section className="timeline-panel" aria-label={`${selectedTitle} 时间线`}>
+        <section className="timeline-panel" aria-label={`${selected.title} 时间线`}>
           <div className="panel-head">
             <div>
               <span className="caption">生成时间线</span>
@@ -563,10 +538,14 @@ function App() {
               const isDone = index < cursor % selected.timeline.length;
               const isCurrent = index === cursor % selected.timeline.length;
               return (
-                <div className={`timeline-step ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}`} key={item}>
+                <button
+                  className={`timeline-step ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}`}
+                  key={item}
+                  onClick={() => goToStep(index)}
+                >
                   <span>{index + 1}</span>
                   <strong>{item}</strong>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -576,19 +555,19 @@ function App() {
       {detailVisible && <aside className="inspector" aria-label="场景详情">
         <section className="scene-detail">
           <span className="caption">场景详情</span>
-          <h2>{selectedTitle}</h2>
+          <h2>{selected.title}</h2>
           <dl>
             <div>
               <dt>名称</dt>
-              <dd>{selectedTitle}</dd>
+              <dd>{selected.title}</dd>
             </div>
             <div>
               <dt>所属课程</dt>
-              <dd>{selectedCourseTitle}</dd>
+              <dd>{selectedCourse.title}</dd>
             </div>
             <div>
               <dt>所属章节</dt>
-              <dd>{selectedChapterTitle}</dd>
+              <dd>{selectedChapter.title}</dd>
             </div>
             <div>
               <dt>难度</dt>
@@ -617,11 +596,15 @@ function App() {
 
         <section className="playback-card">
           <h3>播放控制</h3>
-          <button className="play-button" onClick={() => setIsPlaying(true)}>
-            <Play size={17} />
-            播放
-          </button>
           <div className="playback-actions">
+            <button onClick={stepBackward}>
+              <ChevronLeft size={16} />
+              上一步
+            </button>
+            <button onClick={stepForward}>
+              <ChevronRight size={16} />
+              下一步
+            </button>
             <button onClick={() => setIsPlaying(false)}>
               <Pause size={16} />
               暂停
