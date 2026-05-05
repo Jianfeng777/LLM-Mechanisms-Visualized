@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Activity,
@@ -234,6 +234,7 @@ function App() {
   const [detailVisible, setDetailVisible] = useState(true);
   const [cursor, setCursor] = useState(0);
   const [query, setQuery] = useState("");
+  const postMenuRef = useRef<HTMLDetailsElement>(null);
 
   const selected = concepts[selectedId] || concepts[firstConceptId];
   const selectedCourse = courses.find((course) => course.id === selected.courseId) || courses[0];
@@ -485,7 +486,7 @@ function App() {
               <span className="empty-chip">无</span>
             )}
           </div>
-          <details className="post-menu">
+          <details className="post-menu" ref={postMenuRef}>
             <summary className={relatedCourses.length === 0 ? "post-trigger empty" : "post-trigger"}>
               后置知识点
               <ChevronDown size={15} />
@@ -503,7 +504,15 @@ function App() {
                           <span>{chapter.title}</span>
                           <div className="post-concept-list">
                             {chapter.conceptIds.map((conceptId) => (
-                              <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
+                              <button
+                                key={conceptId}
+                                onClick={() => {
+                                  setSelectedId(conceptId);
+                                  if (postMenuRef.current) {
+                                    postMenuRef.current.open = false;
+                                  }
+                                }}
+                              >
                                 {concepts[conceptId].title}
                               </button>
                             ))}
