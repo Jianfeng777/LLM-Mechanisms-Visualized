@@ -149,10 +149,61 @@ button {
   font-weight: 800;
 }
 
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  padding-left: 4px;
+}
+
+.chapter-group {
+  display: grid;
+  gap: 5px;
+  padding-left: 10px;
+  border-left: 1px solid #dce5e8;
+}
+
+.chapter-toggle {
+  display: grid;
+  grid-template-columns: 17px 1fr 24px;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  color: #52616b;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.chapter-toggle:hover {
+  color: #0f5f59;
+  background: #f4faf9;
+  border-color: #d6ebe8;
+}
+
+.chapter-toggle span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chapter-toggle small {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  color: #60717a;
+  background: #f3f7f8;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .concept-list {
   display: grid;
   gap: 5px;
-  padding-left: 6px;
+  padding-left: 8px;
 }
 
 .concept-link {

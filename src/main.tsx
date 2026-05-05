@@ -37,11 +37,17 @@ type Concept = {
   controls: string[];
 };
 
+type Chapter = {
+  id: string;
+  title: string;
+  conceptIds: string[];
+};
+
 type Course = {
   id: string;
   title: string;
   summary: string;
-  conceptIds: string[];
+  chapters: Chapter[];
 };
 
 const concepts: Record<string, Concept> = {
@@ -136,13 +142,40 @@ const defaultCourses: Course[] = [
     id: "app-dev",
     title: "大模型应用开发",
     summary: "面向应用构建、检索增强、工具调用和交互体验的核心概念。",
-    conceptIds: ["token-stream", "context-window", "rag-retrieval", "tool-calling"]
+    chapters: [
+      {
+        id: "generation-basics",
+        title: "基础生成机制",
+        conceptIds: ["token-stream"]
+      },
+      {
+        id: "context-and-retrieval",
+        title: "上下文与检索增强",
+        conceptIds: ["context-window", "rag-retrieval"]
+      },
+      {
+        id: "agents-and-tools",
+        title: "工具与代理流程",
+        conceptIds: ["tool-calling"]
+      }
+    ]
   },
   {
     id: "tuning-deploy",
     title: "大模型调优与部署",
     summary: "面向模型理解、微调、压缩、推理服务和上线运维的核心概念。",
-    conceptIds: ["attention-flow", "lora-adapter"]
+    chapters: [
+      {
+        id: "model-internals",
+        title: "模型结构理解",
+        conceptIds: ["attention-flow"]
+      },
+      {
+        id: "efficient-tuning",
+        title: "轻量微调方法",
+        conceptIds: ["lora-adapter"]
+      }
+    ]
   }
 ];
 
@@ -156,32 +189,47 @@ const iconByConcept: Record<string, React.ElementType> = {
 };
 
 function loadCourseOrder() {
-  const saved = localStorage.getItem("llm-course-order");
+  const saved = localStorage.getItem("llm-chapter-order");
   if (!saved) return defaultCourses;
 
   try {
-    const parsed = JSON.parse(saved) as Record<string, string[]>;
+    const parsed = JSON.parse(saved) as Record<string, Record<string, string[]>>;
     return defaultCourses.map((course) => {
-      const validIds = (parsed[course.id] || []).filter((id) => course.conceptIds.includes(id));
-      const missingIds = course.conceptIds.filter((id) => !validIds.includes(id));
-      return { ...course, conceptIds: [...validIds, ...missingIds] };
+      const savedCourse = parsed[course.id] || {};
+      return {
+        ...course,
+        chapters: course.chapters.map((chapter) => {
+          const validIds = (savedCourse[chapter.id] || []).filter((id) => chapter.conceptIds.includes(id));
+          const missingIds = chapter.conceptIds.filter((id) => !validIds.includes(id));
+          return { ...chapter, conceptIds: [...validIds, ...missingIds] };
+        })
+      };
     });
   } catch {
     return defaultCourses;
   }
 }
 
+const countCourseConcepts = (course: Course) => course.chapters.reduce((total, chapter) => total + chapter.conceptIds.length, 0);
+
+const firstConceptId = defaultCourses[0].chapters[0].conceptIds[0];
+
 function App() {
   const [courses, setCourses] = useState<Course[]>(loadCourseOrder);
   const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
-  const [selectedId, setSelectedId] = useState(defaultCourses[0].conceptIds[0]);
+  const [expandedChapterIds, setExpandedChapterIds] = useState<string[]>(
+    defaultCourses.flatMap((course) => course.chapters.map((chapter) => chapter.id))
+  );
+  const [selectedId, setSelectedId] = useState(firstConceptId);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [query, setQuery] = useState("");
 
-  const selected = concepts[selectedId] || concepts[defaultCourses[0].conceptIds[0]];
+  const selected = concepts[selectedId] || concepts[firstConceptId];
   const selectedCourse = courses.find((course) => course.id === selected.courseId) || courses[0];
+  const selectedChapter =
+    selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -189,20 +237,28 @@ function App() {
     return courses
       .map((course) => ({
         ...course,
-        conceptIds: course.conceptIds.filter((id) => {
-          const concept = concepts[id];
-          return `${course.title} ${concept.title} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
-        })
+        chapters: course.chapters
+          .map((chapter) => ({
+            ...chapter,
+            conceptIds: chapter.conceptIds.filter((id) => {
+              const concept = concepts[id];
+              return `${course.title} ${chapter.title} ${concept.title} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
+            })
+          }))
+          .filter((chapter) => chapter.conceptIds.length > 0)
       }))
-      .filter((course) => course.conceptIds.length > 0);
+      .filter((course) => course.chapters.length > 0);
   }, [courses, query]);
 
   useEffect(() => {
-    const payload = courses.reduce<Record<string, string[]>>((acc, course) => {
-      acc[course.id] = course.conceptIds;
+    const payload = courses.reduce<Record<string, Record<string, string[]>>>((acc, course) => {
+      acc[course.id] = course.chapters.reduce<Record<string, string[]>>((chapterAcc, chapter) => {
+        chapterAcc[chapter.id] = chapter.conceptIds;
+        return chapterAcc;
+      }, {});
       return acc;
     }, {});
-    localStorage.setItem("llm-course-order", JSON.stringify(payload));
+    localStorage.setItem("llm-chapter-order", JSON.stringify(payload));
   }, [courses]);
 
   useEffect(() => {
@@ -224,16 +280,29 @@ function App() {
     );
   };
 
-  const moveConcept = (courseId: string, targetId: string) => {
+  const toggleChapter = (chapterId: string) => {
+    setExpandedChapterIds((current) =>
+      current.includes(chapterId) ? current.filter((id) => id !== chapterId) : [...current, chapterId]
+    );
+  };
+
+  const moveConcept = (courseId: string, chapterId: string, targetId: string) => {
     if (!draggedId || draggedId === targetId) return;
     setCourses((currentCourses) =>
       currentCourses.map((course) => {
-        if (course.id !== courseId || !course.conceptIds.includes(draggedId)) return course;
+        if (course.id !== courseId) return course;
 
-        const nextIds = course.conceptIds.filter((id) => id !== draggedId);
-        const targetIndex = nextIds.indexOf(targetId);
-        nextIds.splice(targetIndex, 0, draggedId);
-        return { ...course, conceptIds: nextIds };
+        return {
+          ...course,
+          chapters: course.chapters.map((chapter) => {
+            if (chapter.id !== chapterId || !chapter.conceptIds.includes(draggedId)) return chapter;
+
+            const nextIds = chapter.conceptIds.filter((id) => id !== draggedId);
+            const targetIndex = nextIds.indexOf(targetId);
+            nextIds.splice(targetIndex, 0, draggedId);
+            return { ...chapter, conceptIds: nextIds };
+          })
+        };
       })
     );
   };
@@ -269,29 +338,47 @@ function App() {
                 <button className="course-toggle" onClick={() => toggleCourse(course.id)}>
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   <span>{course.title}</span>
-                  <small>{course.conceptIds.length}</small>
+                  <small>{countCourseConcepts(course)}</small>
                 </button>
 
                 {isExpanded && (
-                  <div className="concept-list">
-                    {course.conceptIds.map((conceptId) => {
-                      const concept = concepts[conceptId];
-                      const Icon = iconByConcept[concept.id] || Sparkles;
+                  <div className="chapter-list">
+                    {course.chapters.map((chapter) => {
+                      const isChapterExpanded = expandedChapterIds.includes(chapter.id) || query.trim().length > 0;
                       return (
-                        <button
-                          className={`concept-link ${concept.id === selected.id ? "active" : ""}`}
-                          draggable
-                          key={concept.id}
-                          onClick={() => setSelectedId(concept.id)}
-                          onDragStart={() => setDraggedId(concept.id)}
-                          onDragEnd={() => setDraggedId(null)}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => moveConcept(course.id, concept.id)}
-                        >
-                          <GripVertical className="drag-handle" size={15} />
-                          <Icon size={17} />
-                          <span>{concept.title}</span>
-                        </button>
+                        <section className="chapter-group" key={chapter.id}>
+                          <button className="chapter-toggle" onClick={() => toggleChapter(chapter.id)}>
+                            {isChapterExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                            <span>{chapter.title}</span>
+                            <small>{chapter.conceptIds.length}</small>
+                          </button>
+
+                          {isChapterExpanded && (
+                            <div className="concept-list">
+                              {chapter.conceptIds.map((conceptId) => {
+                                const concept = concepts[conceptId];
+                                const Icon = iconByConcept[concept.id] || Sparkles;
+                                return (
+                                  <button
+                                    className={`concept-link ${concept.id === selected.id ? "active" : ""}`}
+                                    data-concept-id={concept.id}
+                                    draggable
+                                    key={concept.id}
+                                    onClick={() => setSelectedId(concept.id)}
+                                    onDragStart={() => setDraggedId(concept.id)}
+                                    onDragEnd={() => setDraggedId(null)}
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={() => moveConcept(course.id, chapter.id, concept.id)}
+                                  >
+                                    <GripVertical className="drag-handle" size={15} />
+                                    <Icon size={17} />
+                                    <span>{concept.title}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
                       );
                     })}
                   </div>
@@ -307,7 +394,9 @@ function App() {
           <div>
             <span className="caption">{selectedCourse.title}</span>
             <h1>{selected.title}</h1>
-            <p>{selected.summary}</p>
+            <p>
+              {selectedChapter.title} · {selected.summary}
+            </p>
           </div>
         </header>
 
@@ -394,6 +483,10 @@ function App() {
             <div>
               <dt>所属课程</dt>
               <dd>{selectedCourse.title}</dd>
+            </div>
+            <div>
+              <dt>所属章节</dt>
+              <dd>{selectedChapter.title}</dd>
             </div>
             <div>
               <dt>难度</dt>
