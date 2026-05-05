@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   DatabaseZap,
+  Edit3,
   Gauge,
   GripVertical,
   Info,
@@ -15,6 +16,7 @@ import {
   Play,
   RotateCcw,
   Search,
+  Settings2,
   Sparkles,
   Wrench
 } from "lucide-react";
@@ -35,6 +37,7 @@ type Concept = {
   insights: string[];
   keywords: string[];
   controls: string[];
+  prerequisiteIds?: string[];
 };
 
 type Chapter = {
@@ -48,6 +51,12 @@ type Course = {
   title: string;
   summary: string;
   chapters: Chapter[];
+};
+
+type LabelOverrides = {
+  courses: Record<string, string>;
+  chapters: Record<string, string>;
+  concepts: Record<string, string>;
 };
 
 const concepts: Record<string, Concept> = {
@@ -77,7 +86,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["收集消息", "统计 token", "保留关键段", "压缩历史", "生成回答"],
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
     keywords: ["上下文预算", "截断策略", "历史摘要", "位置编码"],
-    controls: ["预算", "保留策略", "摘要开关"]
+    controls: ["预算", "保留策略", "摘要开关"],
+    prerequisiteIds: ["token-stream"]
   },
   "rag-retrieval": {
     id: "rag-retrieval",
@@ -91,7 +101,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["理解问题", "向量召回", "片段重排", "拼接证据", "输出答案"],
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
     keywords: ["Embedding", "向量库", "重排序", "引用链"],
-    controls: ["top-k", "重排", "引用显示"]
+    controls: ["top-k", "重排", "引用显示"],
+    prerequisiteIds: ["context-window", "token-stream"]
   },
   "tool-calling": {
     id: "tool-calling",
@@ -105,7 +116,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["识别意图", "选择工具", "生成参数", "执行调用", "整合结果"],
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
-    controls: ["工具白名单", "参数校验", "重试"]
+    controls: ["工具白名单", "参数校验", "重试"],
+    prerequisiteIds: ["token-stream", "context-window"]
   },
   "attention-flow": {
     id: "attention-flow",
@@ -133,7 +145,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["准备数据", "冻结参数", "训练适配器", "评估效果", "上线版本"],
     insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
-    controls: ["rank", "alpha", "dropout"]
+    controls: ["rank", "alpha", "dropout"],
+    prerequisiteIds: ["attention-flow"]
   }
 };
 
@@ -214,8 +227,25 @@ const countCourseConcepts = (course: Course) => course.chapters.reduce((total, c
 
 const firstConceptId = defaultCourses[0].chapters[0].conceptIds[0];
 
+function loadLabelOverrides(): LabelOverrides {
+  const saved = localStorage.getItem("llm-label-overrides");
+  if (!saved) return { courses: {}, chapters: {}, concepts: {} };
+
+  try {
+    const parsed = JSON.parse(saved) as Partial<LabelOverrides>;
+    return {
+      courses: parsed.courses || {},
+      chapters: parsed.chapters || {},
+      concepts: parsed.concepts || {}
+    };
+  } catch {
+    return { courses: {}, chapters: {}, concepts: {} };
+  }
+}
+
 function App() {
   const [courses, setCourses] = useState<Course[]>(loadCourseOrder);
+  const [labelOverrides, setLabelOverrides] = useState<LabelOverrides>(loadLabelOverrides);
   const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
   const [expandedChapterIds, setExpandedChapterIds] = useState<string[]>(
     defaultCourses.flatMap((course) => course.chapters.map((chapter) => chapter.id))
@@ -223,6 +253,7 @@ function App() {
   const [selectedId, setSelectedId] = useState(firstConceptId);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [detailVisible, setDetailVisible] = useState(true);
   const [cursor, setCursor] = useState(0);
   const [query, setQuery] = useState("");
 
@@ -230,6 +261,10 @@ function App() {
   const selectedCourse = courses.find((course) => course.id === selected.courseId) || courses[0];
   const selectedChapter =
     selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
+  const selectedTitle = labelOverrides.concepts[selected.id] || selected.title;
+  const selectedCourseTitle = labelOverrides.courses[selectedCourse.id] || selectedCourse.title;
+  const selectedChapterTitle = labelOverrides.chapters[selectedChapter.id] || selectedChapter.title;
+  const prerequisiteIds = selected.prerequisiteIds || [];
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -242,13 +277,16 @@ function App() {
             ...chapter,
             conceptIds: chapter.conceptIds.filter((id) => {
               const concept = concepts[id];
-              return `${course.title} ${chapter.title} ${concept.title} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
+              const courseTitle = labelOverrides.courses[course.id] || course.title;
+              const chapterTitle = labelOverrides.chapters[chapter.id] || chapter.title;
+              const conceptTitle = labelOverrides.concepts[concept.id] || concept.title;
+              return `${courseTitle} ${chapterTitle} ${conceptTitle} ${concept.summary}`.toLowerCase().includes(normalizedQuery);
             })
           }))
           .filter((chapter) => chapter.conceptIds.length > 0)
       }))
       .filter((course) => course.chapters.length > 0);
-  }, [courses, query]);
+  }, [courses, labelOverrides, query]);
 
   useEffect(() => {
     const payload = courses.reduce<Record<string, Record<string, string[]>>>((acc, course) => {
@@ -260,6 +298,10 @@ function App() {
     }, {});
     localStorage.setItem("llm-chapter-order", JSON.stringify(payload));
   }, [courses]);
+
+  useEffect(() => {
+    localStorage.setItem("llm-label-overrides", JSON.stringify(labelOverrides));
+  }, [labelOverrides]);
 
   useEffect(() => {
     setCursor(0);
@@ -312,8 +354,20 @@ function App() {
     setIsPlaying(false);
   };
 
+  const renameItem = (type: keyof LabelOverrides, id: string, currentName: string) => {
+    const nextName = window.prompt("请输入新的名称", currentName)?.trim();
+    if (!nextName) return;
+    setLabelOverrides((current) => ({
+      ...current,
+      [type]: {
+        ...current[type],
+        [id]: nextName
+      }
+    }));
+  };
+
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${detailVisible ? "detail-open" : "detail-closed"}`}>
       <aside className="sidebar" aria-label="课程导航">
         <div className="brand">
           <div className="brand-mark">
@@ -333,24 +387,40 @@ function App() {
         <nav className="course-list">
           {filteredCourses.map((course) => {
             const isExpanded = expandedCourseIds.includes(course.id) || query.trim().length > 0;
+            const courseTitle = labelOverrides.courses[course.id] || course.title;
             return (
               <section className="course-group" key={course.id}>
                 <button className="course-toggle" onClick={() => toggleCourse(course.id)}>
                   {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  <span>{course.title}</span>
+                  <span>{courseTitle}</span>
                   <small>{countCourseConcepts(course)}</small>
+                </button>
+                <button
+                  className="rename-button course-rename"
+                  onClick={() => renameItem("courses", course.id, courseTitle)}
+                  aria-label={`重命名课程 ${courseTitle}`}
+                >
+                  <Edit3 size={14} />
                 </button>
 
                 {isExpanded && (
                   <div className="chapter-list">
                     {course.chapters.map((chapter) => {
                       const isChapterExpanded = expandedChapterIds.includes(chapter.id) || query.trim().length > 0;
+                      const chapterTitle = labelOverrides.chapters[chapter.id] || chapter.title;
                       return (
                         <section className="chapter-group" key={chapter.id}>
                           <button className="chapter-toggle" onClick={() => toggleChapter(chapter.id)}>
                             {isChapterExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                            <span>{chapter.title}</span>
+                            <span>{chapterTitle}</span>
                             <small>{chapter.conceptIds.length}</small>
+                          </button>
+                          <button
+                            className="rename-button chapter-rename"
+                            onClick={() => renameItem("chapters", chapter.id, chapterTitle)}
+                            aria-label={`重命名章节 ${chapterTitle}`}
+                          >
+                            <Edit3 size={13} />
                           </button>
 
                           {isChapterExpanded && (
@@ -358,6 +428,7 @@ function App() {
                               {chapter.conceptIds.map((conceptId) => {
                                 const concept = concepts[conceptId];
                                 const Icon = iconByConcept[concept.id] || Sparkles;
+                                const conceptTitle = labelOverrides.concepts[concept.id] || concept.title;
                                 return (
                                   <button
                                     className={`concept-link ${concept.id === selected.id ? "active" : ""}`}
@@ -372,7 +443,18 @@ function App() {
                                   >
                                     <GripVertical className="drag-handle" size={15} />
                                     <Icon size={17} />
-                                    <span>{concept.title}</span>
+                                    <span>{conceptTitle}</span>
+                                    <span
+                                      className="inline-rename"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        renameItem("concepts", concept.id, conceptTitle);
+                                      }}
+                                      role="button"
+                                      aria-label={`重命名知识点 ${conceptTitle}`}
+                                    >
+                                      <Edit3 size={13} />
+                                    </span>
                                   </button>
                                 );
                               })}
@@ -392,11 +474,31 @@ function App() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="caption">{selectedCourse.title}</span>
-            <h1>{selected.title}</h1>
+            <span className="caption">{selectedCourseTitle}</span>
+            <h1>{selectedTitle}</h1>
             <p>
-              {selectedChapter.title} · {selected.summary}
+              {selectedChapterTitle} · {selected.summary}
             </p>
+            {prerequisiteIds.length > 0 && (
+              <div className="prerequisite-row" aria-label="前置知识点">
+                <span>前置知识点</span>
+                {prerequisiteIds.map((id) => (
+                  <button key={id} onClick={() => setSelectedId(id)}>
+                    {labelOverrides.concepts[id] || concepts[id].title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="topbar-actions">
+            <button className="primary-button" onClick={() => setIsPlaying(true)}>
+              <Play size={17} />
+              播放演示
+            </button>
+            <button className="ghost-button" onClick={() => setDetailVisible((visible) => !visible)}>
+              <Settings2 size={17} />
+              {detailVisible ? "隐藏详情" : "设置"}
+            </button>
           </div>
         </header>
 
@@ -405,7 +507,7 @@ function App() {
             <div className="panel-head">
               <div>
                 <span className="caption">当前概念</span>
-                <h2>{selected.title}</h2>
+                <h2>{selectedTitle}</h2>
               </div>
               <span className={isPlaying ? "status running" : "status"}>{isPlaying ? "播放中" : "待播放"}</span>
             </div>
@@ -429,11 +531,11 @@ function App() {
             </div>
           </section>
 
-          <section className="flow-panel" aria-label={`${selected.title} 流程`}>
+          <section className="flow-panel" aria-label={`${selectedTitle} 流程`}>
             <div className="panel-head">
               <div>
                 <span className="caption">概念流程</span>
-                <h2>{selected.title}</h2>
+                <h2>{selectedTitle}</h2>
               </div>
               <span className="difficulty">{selected.difficulty}</span>
             </div>
@@ -449,7 +551,7 @@ function App() {
           </section>
         </div>
 
-        <section className="timeline-panel" aria-label={`${selected.title} 时间线`}>
+        <section className="timeline-panel" aria-label={`${selectedTitle} 时间线`}>
           <div className="panel-head">
             <div>
               <span className="caption">生成时间线</span>
@@ -471,22 +573,22 @@ function App() {
         </section>
       </section>
 
-      <aside className="inspector" aria-label="场景详情">
+      {detailVisible && <aside className="inspector" aria-label="场景详情">
         <section className="scene-detail">
           <span className="caption">场景详情</span>
-          <h2>{selected.title}</h2>
+          <h2>{selectedTitle}</h2>
           <dl>
             <div>
               <dt>名称</dt>
-              <dd>{selected.title}</dd>
+              <dd>{selectedTitle}</dd>
             </div>
             <div>
               <dt>所属课程</dt>
-              <dd>{selectedCourse.title}</dd>
+              <dd>{selectedCourseTitle}</dd>
             </div>
             <div>
               <dt>所属章节</dt>
-              <dd>{selectedChapter.title}</dd>
+              <dd>{selectedChapterTitle}</dd>
             </div>
             <div>
               <dt>难度</dt>
@@ -565,7 +667,7 @@ function App() {
           <Info size={17} />
           <p>进入概念页面后默认停止。老师点击播放后，token、流程和时间线会同步推进。</p>
         </section>
-      </aside>
+      </aside>}
     </main>
   );
 }

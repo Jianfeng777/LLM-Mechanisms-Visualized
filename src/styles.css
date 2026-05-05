@@ -36,6 +36,10 @@ button {
     #f7f9fa;
 }
 
+.app-shell.detail-closed {
+  grid-template-columns: 318px minmax(0, 1fr);
+}
+
 .sidebar,
 .inspector {
   background: rgba(255, 255, 255, 0.92);
@@ -113,13 +117,14 @@ button {
 }
 
 .course-group {
+  position: relative;
   display: grid;
   gap: 7px;
 }
 
 .course-toggle {
   display: grid;
-  grid-template-columns: 18px 1fr 28px;
+  grid-template-columns: 18px 1fr 28px 24px;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -130,6 +135,30 @@ button {
   background: #ffffff;
   border: 1px solid #dce5e8;
   border-radius: 8px;
+}
+
+.rename-button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: #7a8790;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.rename-button:hover,
+.inline-rename:hover {
+  color: #0f5f59;
+  background: #e8f6f4;
+  border-color: #b9d8d4;
+}
+
+.course-rename {
+  position: absolute;
+  top: 7px;
+  right: 8px;
 }
 
 .course-toggle span {
@@ -156,6 +185,7 @@ button {
 }
 
 .chapter-group {
+  position: relative;
   display: grid;
   gap: 5px;
   padding-left: 10px;
@@ -164,7 +194,7 @@ button {
 
 .chapter-toggle {
   display: grid;
-  grid-template-columns: 17px 1fr 24px;
+  grid-template-columns: 17px 1fr 24px 22px;
   align-items: center;
   gap: 7px;
   width: 100%;
@@ -175,6 +205,12 @@ button {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
+}
+
+.chapter-rename {
+  position: absolute;
+  top: 4px;
+  right: 6px;
 }
 
 .chapter-toggle:hover {
@@ -208,7 +244,7 @@ button {
 
 .concept-link {
   display: grid;
-  grid-template-columns: 16px 20px 1fr;
+  grid-template-columns: 16px 20px 1fr 24px;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -219,6 +255,16 @@ button {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
+}
+
+.inline-rename {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #8a98a1;
+  border: 1px solid transparent;
+  border-radius: 7px;
 }
 
 .concept-link.active,
@@ -242,6 +288,10 @@ button {
 }
 
 .topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
   margin-bottom: 20px;
 }
 
@@ -251,6 +301,64 @@ button {
   color: #5e6d76;
   font-size: 15px;
   line-height: 1.65;
+}
+
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.primary-button,
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.primary-button {
+  color: #ffffff;
+  background: #0f766e;
+  border: 1px solid #0f766e;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18);
+}
+
+.ghost-button {
+  color: #26343d;
+  background: #ffffff;
+  border: 1px solid #dce5e8;
+}
+
+.prerequisite-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.prerequisite-row > span {
+  color: #687782;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.prerequisite-row button {
+  min-height: 28px;
+  padding: 0 10px;
+  color: #0f5f59;
+  background: #ebf6f5;
+  border: 1px solid #c5e3df;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .caption {
@@ -743,13 +851,20 @@ h3 {
     grid-template-columns: 280px minmax(0, 1fr);
   }
 
+  .app-shell.detail-open {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
   .inspector {
-    display: none;
+    grid-column: 1 / -1;
+    border-width: 1px 0 0 0;
   }
 }
 
 @media (max-width: 860px) {
-  .app-shell {
+  .app-shell,
+  .app-shell.detail-open,
+  .app-shell.detail-closed {
     grid-template-columns: 1fr;
   }
 
@@ -763,6 +878,14 @@ h3 {
 
   .concept-grid {
     grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
   }
 
   .timeline-track {
