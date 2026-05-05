@@ -474,36 +474,34 @@ function App() {
                 ))}
               </div>
               )}
-              <div className="post-menu">
-                <button className="post-trigger">
+              <details className="post-menu">
+                <summary className="post-trigger">
                   后置知识点
                   <ChevronDown size={15} />
-                </button>
-                <div className="post-course-list">
+                </summary>
+                <div className="post-panel">
                   {relatedCourses.length === 0 && <div className="post-empty">暂无关联知识点</div>}
                   {relatedCourses.map((course) => (
-                    <div className="post-course-item" key={course.id}>
-                      <span>{course.title}</span>
-                      <ChevronRight size={14} />
-                      <div className="post-chapter-list">
+                    <section className="post-course-block" key={course.id}>
+                      <h3>{course.title}</h3>
+                      <div className="post-chapter-blocks">
                         {course.chapters.map((chapter) => (
-                            <div className="post-chapter-item" key={chapter.id}>
-                              <span>{chapter.title}</span>
-                              <ChevronRight size={14} />
-                              <div className="post-concept-list">
-                                {chapter.conceptIds.map((conceptId) => (
-                                    <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
-                                      {concepts[conceptId].title}
-                                    </button>
-                                  ))}
-                              </div>
+                          <div className="post-chapter-block" key={chapter.id}>
+                            <span>{chapter.title}</span>
+                            <div className="post-concept-list">
+                              {chapter.conceptIds.map((conceptId) => (
+                                <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
+                                  {concepts[conceptId].title}
+                                </button>
+                              ))}
                             </div>
+                          </div>
                           ))}
                       </div>
-                    </div>
+                    </section>
                   ))}
                 </div>
-              </div>
+              </details>
             </div>
           </div>
           <div className="topbar-actions">

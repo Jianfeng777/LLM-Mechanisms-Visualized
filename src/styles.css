@@ -263,6 +263,11 @@ button {
   line-height: 1.65;
 }
 
+.topbar > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .topbar-actions {
   display: flex;
   flex-wrap: wrap;
@@ -305,7 +310,13 @@ button {
 }
 
 .knowledge-links {
+  justify-content: space-between;
+  width: 100%;
   margin-top: 14px;
+}
+
+.prerequisite-row {
+  min-width: 0;
 }
 
 .prerequisite-row > span {
@@ -327,6 +338,7 @@ button {
 
 .post-menu {
   position: relative;
+  margin-left: auto;
 }
 
 .post-trigger {
@@ -341,65 +353,69 @@ button {
   border-radius: 8px;
   font-size: 13px;
   font-weight: 800;
+  list-style: none;
+  cursor: pointer;
 }
 
-.post-course-list,
-.post-chapter-list,
-.post-concept-list {
+.post-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.post-panel {
   position: absolute;
   z-index: 20;
-  display: none;
-  min-width: 190px;
-  padding: 6px;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 12px;
+  width: min(420px, 78vw);
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
   background: #ffffff;
   border: 1px solid #dce5e8;
   border-radius: 8px;
   box-shadow: 0 18px 42px rgba(31, 45, 52, 0.13);
 }
 
-.post-course-list {
-  top: calc(100% + 8px);
-  left: 0;
-}
-
-.post-menu:hover .post-course-list,
-.post-course-item:hover > .post-chapter-list,
-.post-chapter-item:hover > .post-concept-list,
-.post-menu:focus-within .post-course-list,
-.post-course-item:focus-within > .post-chapter-list,
-.post-chapter-item:focus-within > .post-concept-list {
+.post-course-block {
   display: grid;
-}
-
-.post-course-item,
-.post-chapter-item {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 16px;
-  align-items: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 7px 8px;
-  color: #43515a;
-  border-radius: 7px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8eef0;
+}
+
+.post-course-block:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.post-course-block h3 {
+  color: #26343d;
   font-size: 13px;
+  line-height: 1.25;
+}
+
+.post-chapter-blocks {
+  display: grid;
+  gap: 10px;
+}
+
+.post-chapter-block {
+  display: grid;
+  gap: 7px;
+}
+
+.post-chapter-block > span {
+  color: #687782;
+  font-size: 12px;
   font-weight: 800;
 }
 
-.post-course-item:hover,
-.post-chapter-item:hover {
-  color: #0f5f59;
-  background: #ebf6f5;
-}
-
-.post-chapter-list,
 .post-concept-list {
-  top: -7px;
-  left: calc(100% + 8px);
-}
-
-.post-concept-list {
-  gap: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
 }
 
 .post-concept-list button {
@@ -407,8 +423,8 @@ button {
   padding: 0 9px;
   color: #43515a;
   text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
+  background: #f7fafb;
+  border: 1px solid #dce5e8;
   border-radius: 7px;
   font-size: 13px;
   font-weight: 800;
@@ -418,6 +434,12 @@ button {
   color: #0f5f59;
   background: #ebf6f5;
   border-color: #c5e3df;
+}
+
+.post-empty {
+  color: #687782;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .caption {
