@@ -18,7 +18,8 @@ const seedCourses = [
     chapters: [
       { id: "generation-basics", title: "基础生成机制", conceptIds: ["token-stream"] },
       { id: "context-and-retrieval", title: "上下文与检索增强", conceptIds: ["context-window", "rag-retrieval"] },
-      { id: "agents-and-tools", title: "工具与代理流程", conceptIds: ["tool-calling"] }
+      { id: "agents-and-tools", title: "工具与代理流程", conceptIds: ["tool-calling"] },
+      { id: "gradio-app-dev", title: "Gradio 应用开发", conceptIds: ["frontend-backend-basics"] }
     ]
   },
   {
@@ -122,6 +123,25 @@ const seedConcepts = [
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
     prerequisiteIds: ["attention-flow"]
+  },
+  {
+    id: "frontend-backend-basics",
+    courseId: "app-dev",
+    title: "什么是前端和后端",
+    summary: "用 Gradio 应用作为例子，区分浏览器界面、用户交互、Python 函数和服务端执行逻辑。",
+    difficulty: "入门",
+    updatedAt: "2026-05-05",
+    tokens: ["浏览器", "点击", "请求", "后端", "函数", "处理", "返回", "结果"],
+    stages: ["前端界面", "事件触发", "请求后端", "执行业务逻辑", "返回结果"],
+    timeline: ["用户操作界面", "组件收集输入", "发送请求", "Python 函数处理", "界面展示输出"],
+    insights: [
+      "前端负责让用户看见和操作界面。",
+      "后端负责执行模型、工具、文件读写等真正的计算逻辑。",
+      "Gradio 把前后端连接封装起来，但讲解时仍然可以拆开理解。"
+    ],
+    keywords: ["前端", "后端", "请求响应", "Gradio"],
+    controls: ["输入组件", "事件绑定", "函数输出"],
+    prerequisiteIds: []
   }
 ];
 
@@ -226,6 +246,39 @@ if (count === 0) {
 }
 
 db.prepare("DELETE FROM concept_relations WHERE relation_type = 'next'").run();
+
+const gradioChapter = seedCourses
+  .find((course) => course.id === "app-dev")
+  ?.chapters.find((chapter) => chapter.id === "gradio-app-dev");
+const frontendBackendConcept = seedConcepts.find((concept) => concept.id === "frontend-backend-basics");
+
+if (gradioChapter && frontendBackendConcept) {
+  db.prepare("INSERT OR IGNORE INTO chapters VALUES (?, ?, ?, ?)").run(
+    gradioChapter.id,
+    "app-dev",
+    gradioChapter.title,
+    3
+  );
+  db.prepare("INSERT OR IGNORE INTO concepts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    frontendBackendConcept.id,
+    frontendBackendConcept.courseId,
+    frontendBackendConcept.title,
+    frontendBackendConcept.summary,
+    frontendBackendConcept.difficulty,
+    frontendBackendConcept.updatedAt,
+    JSON.stringify(frontendBackendConcept.tokens),
+    JSON.stringify(frontendBackendConcept.stages),
+    JSON.stringify(frontendBackendConcept.timeline),
+    JSON.stringify(frontendBackendConcept.insights),
+    JSON.stringify(frontendBackendConcept.keywords),
+    JSON.stringify(frontendBackendConcept.controls)
+  );
+  db.prepare("INSERT OR IGNORE INTO chapter_concepts VALUES (?, ?, ?)").run(
+    gradioChapter.id,
+    frontendBackendConcept.id,
+    0
+  );
+}
 
 function json(value) {
   return JSON.parse(value);

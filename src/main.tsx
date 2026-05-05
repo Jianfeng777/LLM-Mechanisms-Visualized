@@ -141,6 +141,24 @@ const fallbackConcepts: Record<string, Concept> = {
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
     prerequisiteIds: ["attention-flow"]
+  },
+  "frontend-backend-basics": {
+    id: "frontend-backend-basics",
+    courseId: "app-dev",
+    title: "什么是前端和后端",
+    summary: "用 Gradio 应用作为例子，区分浏览器界面、用户交互、Python 函数和服务端执行逻辑。",
+    difficulty: "入门",
+    updatedAt: "2026-05-05",
+    tokens: ["浏览器", "点击", "请求", "后端", "函数", "处理", "返回", "结果"],
+    stages: ["前端界面", "事件触发", "请求后端", "执行业务逻辑", "返回结果"],
+    timeline: ["用户操作界面", "组件收集输入", "发送请求", "Python 函数处理", "界面展示输出"],
+    insights: [
+      "前端负责让用户看见和操作界面。",
+      "后端负责执行模型、工具、文件读写等真正的计算逻辑。",
+      "Gradio 把前后端连接封装起来，但讲解时仍然可以拆开理解。"
+    ],
+    keywords: ["前端", "后端", "请求响应", "Gradio"],
+    controls: ["输入组件", "事件绑定", "函数输出"]
   }
 };
 
@@ -164,6 +182,11 @@ const fallbackCourses: Course[] = [
         id: "agents-and-tools",
         title: "工具与代理流程",
         conceptIds: ["tool-calling"]
+      },
+      {
+        id: "gradio-app-dev",
+        title: "Gradio 应用开发",
+        conceptIds: ["frontend-backend-basics"]
       }
     ]
   },
@@ -192,7 +215,8 @@ const iconByConcept: Record<string, React.ElementType> = {
   "context-window": Layers3,
   "rag-retrieval": DatabaseZap,
   "tool-calling": Wrench,
-  "lora-adapter": Activity
+  "lora-adapter": Activity,
+  "frontend-backend-basics": Layers3
 };
 
 function loadCourseOrder(baseCourses: Course[]) {
