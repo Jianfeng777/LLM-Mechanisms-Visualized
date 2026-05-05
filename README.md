@@ -5,8 +5,8 @@
 ## 本地运行
 
 ```bash
-npm install
-npm run dev
+corepack pnpm install
+corepack pnpm dev
 ```
 
 ## 上传内容格式
