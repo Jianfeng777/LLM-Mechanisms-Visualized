@@ -463,51 +463,11 @@ function App() {
             <p>
               {selectedChapter.title} · {selected.summary}
             </p>
-            <div className="knowledge-links" aria-label="知识点关系">
-              {prerequisiteIds.length > 0 && (
-                <div className="prerequisite-row" aria-label="前置知识点">
-                <span>前置知识点</span>
-                {prerequisiteIds.map((id) => (
-                  <button key={id} onClick={() => setSelectedId(id)}>
-                    {concepts[id].title}
-                  </button>
-                ))}
-              </div>
-              )}
-              <details className="post-menu">
-                <summary className="post-trigger">
-                  后置知识点
-                  <ChevronDown size={15} />
-                </summary>
-                <div className="post-panel">
-                  {relatedCourses.length === 0 && <div className="post-empty">暂无关联知识点</div>}
-                  {relatedCourses.map((course) => (
-                    <section className="post-course-block" key={course.id}>
-                      <h3>{course.title}</h3>
-                      <div className="post-chapter-blocks">
-                        {course.chapters.map((chapter) => (
-                          <div className="post-chapter-block" key={chapter.id}>
-                            <span>{chapter.title}</span>
-                            <div className="post-concept-list">
-                              {chapter.conceptIds.map((conceptId) => (
-                                <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
-                                  {concepts[conceptId].title}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          ))}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              </details>
-            </div>
           </div>
           <div className="topbar-actions">
-            <button className="primary-button" onClick={() => setIsPlaying(true)}>
-              <Play size={17} />
-              播放演示
+            <button className={isPlaying ? "primary-button pause-mode" : "primary-button"} onClick={() => setIsPlaying((playing) => !playing)}>
+              {isPlaying ? <Pause size={17} /> : <Play size={17} />}
+              {isPlaying ? "暂停演示" : "播放演示"}
             </button>
             <button className="ghost-button" onClick={() => setDetailVisible((visible) => !visible)}>
               <Settings2 size={17} />
@@ -515,6 +475,64 @@ function App() {
             </button>
           </div>
         </header>
+
+        <div className="knowledge-links" aria-label="知识点关系">
+          <div className="prerequisite-row" aria-label="前置知识点">
+            <span>前置知识点</span>
+            {prerequisiteIds.length > 0 ? (
+              prerequisiteIds.map((id) => (
+                <button key={id} onClick={() => setSelectedId(id)}>
+                  {concepts[id].title}
+                </button>
+              ))
+            ) : (
+              <span className="empty-chip">无</span>
+            )}
+          </div>
+          <details
+            className="post-menu"
+            onToggle={(event) => {
+              if (relatedCourses.length === 0) {
+                event.currentTarget.open = false;
+              }
+            }}
+          >
+            <summary
+              className={relatedCourses.length === 0 ? "post-trigger disabled" : "post-trigger"}
+              onClick={(event) => {
+                if (relatedCourses.length === 0) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              后置知识点
+              <ChevronDown size={15} />
+            </summary>
+            {relatedCourses.length > 0 && (
+              <div className="post-panel">
+                {relatedCourses.map((course) => (
+                  <section className="post-course-block" key={course.id}>
+                    <h3>{course.title}</h3>
+                    <div className="post-chapter-blocks">
+                      {course.chapters.map((chapter) => (
+                        <div className="post-chapter-block" key={chapter.id}>
+                          <span>{chapter.title}</span>
+                          <div className="post-concept-list">
+                            {chapter.conceptIds.map((conceptId) => (
+                              <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
+                                {concepts[conceptId].title}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </details>
+        </div>
 
         <div className="concept-grid">
           <section className="demo-panel" aria-label={`${selected.title} 演示`}>
