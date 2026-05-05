@@ -38,6 +38,7 @@ type Concept = {
   keywords: string[];
   controls: string[];
   prerequisiteIds?: string[];
+  relatedNextIds?: string[];
 };
 
 type Chapter = {
@@ -53,7 +54,7 @@ type Course = {
   chapters: Chapter[];
 };
 
-const concepts: Record<string, Concept> = {
+const fallbackConcepts: Record<string, Concept> = {
   "token-stream": {
     id: "token-stream",
     courseId: "app-dev",
@@ -66,7 +67,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["读取上下文", "计算概率", "选择 token", "写入输出", "继续下一步"],
     insights: ["每一步都只确定一个新 token。", "温度和 top-p 改变候选分布形状。", "长输出是多次局部选择累积的结果。"],
     keywords: ["自回归解码", "概率分布", "采样策略", "逐步生成"],
-    controls: ["速度", "温度", "top-p"]
+    controls: ["速度", "温度", "top-p"],
+    relatedNextIds: ["context-window", "rag-retrieval"]
   },
   "context-window": {
     id: "context-window",
@@ -81,7 +83,8 @@ const concepts: Record<string, Concept> = {
     insights: ["上下文窗口是有限预算。", "越靠后的信息通常更容易影响回答。", "压缩和摘要能换取更多有效空间。"],
     keywords: ["上下文预算", "截断策略", "历史摘要", "位置编码"],
     controls: ["预算", "保留策略", "摘要开关"],
-    prerequisiteIds: ["token-stream"]
+    prerequisiteIds: ["token-stream"],
+    relatedNextIds: ["rag-retrieval", "tool-calling"]
   },
   "rag-retrieval": {
     id: "rag-retrieval",
@@ -96,7 +99,8 @@ const concepts: Record<string, Concept> = {
     insights: ["RAG 的质量取决于切分、召回和重排。", "检索结果需要和用户问题共同进入上下文。", "引用链可以提升可审计性。"],
     keywords: ["Embedding", "向量库", "重排序", "引用链"],
     controls: ["top-k", "重排", "引用显示"],
-    prerequisiteIds: ["context-window", "token-stream"]
+    prerequisiteIds: ["context-window", "token-stream"],
+    relatedNextIds: ["tool-calling"]
   },
   "tool-calling": {
     id: "tool-calling",
@@ -111,7 +115,8 @@ const concepts: Record<string, Concept> = {
     insights: ["工具调用把语言模型和外部系统连接起来。", "参数结构需要严格校验。", "工具结果应回到模型上下文再综合。"],
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"],
-    prerequisiteIds: ["token-stream", "context-window"]
+    prerequisiteIds: ["token-stream", "context-window"],
+    relatedNextIds: ["rag-retrieval"]
   },
   "attention-flow": {
     id: "attention-flow",
@@ -125,7 +130,8 @@ const concepts: Record<string, Concept> = {
     timeline: ["生成查询", "匹配键值", "应用 mask", "归一权重", "汇聚信息"],
     insights: ["注意力不是完整解释，但能显示信息路由线索。", "不同层和头会捕获不同类型关系。", "因果 mask 阻止模型查看未来 token。"],
     keywords: ["QKV", "因果 mask", "权重热力图", "信息路由"],
-    controls: ["层", "头", "权重阈值"]
+    controls: ["层", "头", "权重阈值"],
+    relatedNextIds: ["lora-adapter"]
   },
   "lora-adapter": {
     id: "lora-adapter",
@@ -140,11 +146,12 @@ const concepts: Record<string, Concept> = {
     insights: ["LoRA 只训练少量增量参数。", "适配器可按任务切换。", "部署时要关注显存、合并策略和版本管理。"],
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
-    prerequisiteIds: ["attention-flow"]
+    prerequisiteIds: ["attention-flow"],
+    relatedNextIds: ["attention-flow"]
   }
 };
 
-const defaultCourses: Course[] = [
+const fallbackCourses: Course[] = [
   {
     id: "app-dev",
     title: "大模型应用开发",
@@ -195,13 +202,13 @@ const iconByConcept: Record<string, React.ElementType> = {
   "lora-adapter": Activity
 };
 
-function loadCourseOrder() {
+function loadCourseOrder(baseCourses: Course[]) {
   const saved = localStorage.getItem("llm-chapter-order");
-  if (!saved) return defaultCourses;
+  if (!saved) return baseCourses;
 
   try {
     const parsed = JSON.parse(saved) as Record<string, Record<string, string[]>>;
-    return defaultCourses.map((course) => {
+    return baseCourses.map((course) => {
       const savedCourse = parsed[course.id] || {};
       return {
         ...course,
@@ -213,19 +220,20 @@ function loadCourseOrder() {
       };
     });
   } catch {
-    return defaultCourses;
+    return baseCourses;
   }
 }
 
 const countCourseConcepts = (course: Course) => course.chapters.reduce((total, chapter) => total + chapter.conceptIds.length, 0);
 
-const firstConceptId = defaultCourses[0].chapters[0].conceptIds[0];
+const firstConceptId = fallbackCourses[0].chapters[0].conceptIds[0];
 
 function App() {
-  const [courses, setCourses] = useState<Course[]>(loadCourseOrder);
-  const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(defaultCourses.map((course) => course.id));
+  const [concepts, setConcepts] = useState<Record<string, Concept>>(fallbackConcepts);
+  const [courses, setCourses] = useState<Course[]>(() => loadCourseOrder(fallbackCourses));
+  const [expandedCourseIds, setExpandedCourseIds] = useState<string[]>(fallbackCourses.map((course) => course.id));
   const [expandedChapterIds, setExpandedChapterIds] = useState<string[]>(
-    defaultCourses.flatMap((course) => course.chapters.map((chapter) => chapter.id))
+    fallbackCourses.flatMap((course) => course.chapters.map((chapter) => chapter.id))
   );
   const [selectedId, setSelectedId] = useState(firstConceptId);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -239,6 +247,40 @@ function App() {
   const selectedChapter =
     selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
   const prerequisiteIds = selected.prerequisiteIds || [];
+  const relatedNextIds = selected.relatedNextIds || [];
+  const relatedCourses = useMemo(
+    () =>
+      courses
+        .map((course) => ({
+          ...course,
+          chapters: course.chapters
+            .map((chapter) => ({
+              ...chapter,
+              conceptIds: chapter.conceptIds.filter((conceptId) => relatedNextIds.includes(conceptId))
+            }))
+            .filter((chapter) => chapter.conceptIds.length > 0)
+        }))
+        .filter((course) => course.chapters.length > 0),
+    [courses, relatedNextIds]
+  );
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:4177/api/content")
+      .then((response) => {
+        if (!response.ok) throw new Error("API unavailable");
+        return response.json() as Promise<{ courses: Course[]; concepts: Record<string, Concept> }>;
+      })
+      .then((payload) => {
+        setConcepts(payload.concepts);
+        setCourses(loadCourseOrder(payload.courses));
+        setExpandedCourseIds(payload.courses.map((course) => course.id));
+        setExpandedChapterIds(payload.courses.flatMap((course) => course.chapters.map((chapter) => chapter.id)));
+      })
+      .catch(() => {
+        setConcepts(fallbackConcepts);
+        setCourses(loadCourseOrder(fallbackCourses));
+      });
+  }, []);
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -438,26 +480,25 @@ function App() {
                   <ChevronDown size={15} />
                 </button>
                 <div className="post-course-list">
-                  {courses.map((course) => (
+                  {relatedCourses.length === 0 && <div className="post-empty">暂无关联知识点</div>}
+                  {relatedCourses.map((course) => (
                     <div className="post-course-item" key={course.id}>
                       <span>{course.title}</span>
                       <ChevronRight size={14} />
                       <div className="post-chapter-list">
                         {course.chapters.map((chapter) => (
-                          <div className="post-chapter-item" key={chapter.id}>
-                            <span>{chapter.title}</span>
-                            <ChevronRight size={14} />
-                            <div className="post-concept-list">
-                              {chapter.conceptIds
-                                .filter((conceptId) => conceptId !== selected.id)
-                                .map((conceptId) => (
-                                  <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
-                                    {concepts[conceptId].title}
-                                  </button>
-                                ))}
+                            <div className="post-chapter-item" key={chapter.id}>
+                              <span>{chapter.title}</span>
+                              <ChevronRight size={14} />
+                              <div className="post-concept-list">
+                                {chapter.conceptIds.map((conceptId) => (
+                                    <button key={conceptId} onClick={() => setSelectedId(conceptId)}>
+                                      {concepts[conceptId].title}
+                                    </button>
+                                  ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   ))}

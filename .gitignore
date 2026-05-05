@@ -5,3 +5,7 @@ dist/
 .env.*
 !.env.example
 .dev-server.*.log
+.api-server.*.log
+data/*.db
+data/*.db-shm
+data/*.db-wal

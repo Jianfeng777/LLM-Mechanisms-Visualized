@@ -9,6 +9,13 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
+`corepack pnpm dev` 会同时启动：
+
+- Vite 页面服务
+- SQLite 内容 API：`http://127.0.0.1:4177/api/content`
+
+内容数据库会自动初始化到 `data/content.db`。课程、章节、知识点、前置关系和后置关系都在 SQLite 中保存；如果 API 没启动，前端会回退到内置示例数据。
+
 ## 上传内容格式
 
 页面支持上传单个 JSON 对象或对象数组。字段如下：
