@@ -53,6 +53,8 @@ type Course = {
   chapters: Chapter[];
 };
 
+type ConceptRenderer = "default" | "frontend-backend";
+
 const fallbackConcepts: Record<string, Concept> = {
   "token-stream": {
     id: "token-stream",
@@ -219,6 +221,10 @@ const iconByConcept: Record<string, React.ElementType> = {
   "frontend-backend-basics": Layers3
 };
 
+const rendererByConcept: Record<string, ConceptRenderer> = {
+  "frontend-backend-basics": "frontend-backend"
+};
+
 function loadCourseOrder(baseCourses: Course[]) {
   const saved = localStorage.getItem("llm-chapter-order");
   if (!saved) return baseCourses;
@@ -245,6 +251,132 @@ const countCourseConcepts = (course: Course) => course.chapters.reduce((total, c
 
 const firstConceptId = fallbackCourses[0].chapters[0].conceptIds[0];
 
+function FrontendBackendRenderer({
+  currentStep,
+  goToStep,
+  isPlaying,
+  selected
+}: {
+  currentStep: number;
+  goToStep: (index: number) => void;
+  isPlaying: boolean;
+  selected: Concept;
+}) {
+  const zones = [
+    {
+      title: "前端界面",
+      label: "Browser UI",
+      detail: "Gradio 自动生成按钮、输入框、图片预览等浏览器可见部分。"
+    },
+    {
+      title: "事件触发",
+      label: "Click / Submit",
+      detail: "用户点击提交后，组件把输入值打包成一次事件。"
+    },
+    {
+      title: "请求后端",
+      label: "HTTP Request",
+      detail: "前端把输入发送给本地或远程的 Gradio Python 服务。"
+    },
+    {
+      title: "执行业务逻辑",
+      label: "Python Function",
+      detail: "后端函数调用模型、读取文件或执行工具，并生成结果。"
+    },
+    {
+      title: "返回结果",
+      label: "Response",
+      detail: "服务端返回结果，前端组件刷新输出区域。"
+    }
+  ];
+  const activeZone = zones[currentStep] || zones[0];
+
+  return (
+    <div className="custom-demo-shell">
+      <section className="frontend-backend-stage" aria-label={`${selected.title} 自定义演示`}>
+        <div className="custom-panel-head">
+          <div>
+            <span className="caption">Gradio 应用结构</span>
+            <h2>一次点击如何穿过前端和后端</h2>
+          </div>
+          <span className={isPlaying ? "status running" : "status"}>{isPlaying ? "播放中" : "待播放"}</span>
+        </div>
+
+        <div className="gradio-map">
+          <article className={`gradio-zone frontend ${currentStep === 0 ? "active" : ""}`}>
+            <span>前端</span>
+            <h3>浏览器里的 Gradio 页面</h3>
+            <div className="mock-browser">
+              <div className="mock-browser-bar">
+                <i />
+                <i />
+                <i />
+              </div>
+              <div className="mock-form">
+                <div className="mock-input">请描述你想让模型完成的任务</div>
+                <button>提交</button>
+                <div className="mock-output">等待后端返回结果</div>
+              </div>
+            </div>
+          </article>
+
+          <div className={`request-bridge ${currentStep === 1 || currentStep === 2 ? "active" : ""}`}>
+            <div className="bridge-line">
+              <span>{currentStep <= 2 ? "request" : "response"}</span>
+            </div>
+            <p>{activeZone.label}</p>
+          </div>
+
+          <article className={`gradio-zone backend ${currentStep === 3 ? "active" : ""}`}>
+            <span>后端</span>
+            <h3>Python 函数和模型逻辑</h3>
+            <div className="code-block" aria-label="Python 后端示例">
+              <code>def respond(prompt):</code>
+              <code>    result = llm(prompt)</code>
+              <code>    return result</code>
+            </div>
+          </article>
+
+          <article className={`gradio-zone result ${currentStep === 4 ? "active" : ""}`}>
+            <span>输出</span>
+            <h3>结果回到前端组件</h3>
+            <p>用户看到的是界面刷新；真正的处理发生在后端函数里。</p>
+          </article>
+        </div>
+
+        <div className="active-explanation">
+          <span>{String(currentStep + 1).padStart(2, "0")}</span>
+          <div>
+            <h3>{activeZone.title}</h3>
+            <p>{activeZone.detail}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="custom-timeline-panel" aria-label={`${selected.title} 时间线`}>
+        <div className="panel-head">
+          <div>
+            <span className="caption">讲解时间线</span>
+            <h2>每一步对应一个区域变化</h2>
+          </div>
+        </div>
+        <div className="custom-step-list">
+          {selected.timeline.map((item, index) => (
+            <button
+              className={`custom-step ${index < currentStep ? "done" : ""} ${index === currentStep ? "current" : ""}`}
+              key={item}
+              onClick={() => goToStep(index)}
+            >
+              <span>{index + 1}</span>
+              <strong>{item}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [concepts, setConcepts] = useState<Record<string, Concept>>(fallbackConcepts);
   const [courses, setCourses] = useState<Course[]>(() => loadCourseOrder(fallbackCourses));
@@ -269,6 +401,7 @@ function App() {
   const currentStep = Math.min(cursor, totalSteps - 1);
   const tokenVisibleCount =
     totalSteps <= 1 ? selected.tokens.length : Math.ceil(((currentStep + 1) / totalSteps) * selected.tokens.length);
+  const renderer = rendererByConcept[selected.id] || "default";
   const relatedCourses = useMemo(
     () =>
       courses
@@ -551,8 +684,17 @@ function App() {
           </details>
         </div>
 
-        <div className="concept-grid">
-          <section className="demo-panel" aria-label={`${selected.title} 演示`}>
+        {renderer === "frontend-backend" ? (
+          <FrontendBackendRenderer
+            currentStep={currentStep}
+            goToStep={goToStep}
+            isPlaying={isPlaying}
+            selected={selected}
+          />
+        ) : (
+          <>
+            <div className="concept-grid">
+              <section className="demo-panel" aria-label={`${selected.title} 演示`}>
             <div className="panel-head">
               <div>
                 <span className="caption">当前概念</span>
@@ -578,9 +720,9 @@ function App() {
                 </div>
               ))}
             </div>
-          </section>
+              </section>
 
-          <section className="flow-panel" aria-label={`${selected.title} 流程`}>
+              <section className="flow-panel" aria-label={`${selected.title} 流程`}>
             <div className="panel-head">
               <div>
                 <span className="caption">概念流程</span>
@@ -597,10 +739,10 @@ function App() {
                 </article>
               ))}
             </div>
-          </section>
-        </div>
+              </section>
+            </div>
 
-        <section className="timeline-panel" aria-label={`${selected.title} 时间线`}>
+            <section className="timeline-panel" aria-label={`${selected.title} 时间线`}>
           <div className="panel-head">
             <div>
               <span className="caption">生成时间线</span>
@@ -623,7 +765,9 @@ function App() {
               );
             })}
           </div>
-        </section>
+            </section>
+          </>
+        )}
       </section>
 
       {detailVisible && <aside className="inspector" aria-label="场景详情">
