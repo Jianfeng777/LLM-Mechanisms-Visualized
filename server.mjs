@@ -95,7 +95,7 @@ const seedConcepts = [
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"],
     prerequisiteIds: ["token-stream", "context-window"],
-    relatedNextIds: ["rag-retrieval"]
+    relatedNextIds: []
   },
   {
     id: "attention-flow",
@@ -127,7 +127,7 @@ const seedConcepts = [
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
     prerequisiteIds: ["attention-flow"],
-    relatedNextIds: ["attention-flow"]
+    relatedNextIds: []
   }
 ];
 
@@ -231,6 +231,12 @@ if (count === 0) {
     throw error;
   }
 }
+
+const removeLegacyNextRelation = db.prepare(
+  "DELETE FROM concept_relations WHERE from_concept_id = ? AND to_concept_id = ? AND relation_type = 'next'"
+);
+removeLegacyNextRelation.run("tool-calling", "rag-retrieval");
+removeLegacyNextRelation.run("lora-adapter", "attention-flow");
 
 function json(value) {
   return JSON.parse(value);

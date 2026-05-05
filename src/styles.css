@@ -384,15 +384,10 @@ button {
   display: none;
 }
 
-.post-trigger.disabled {
+.post-trigger.empty {
   color: #8a98a1;
   background: #f3f7f8;
-  cursor: default;
   opacity: 0.82;
-}
-
-.post-menu:has(.post-trigger.disabled) {
-  pointer-events: none;
 }
 
 .post-panel {
@@ -471,6 +466,9 @@ button {
 }
 
 .post-empty {
+  display: grid;
+  min-height: 56px;
+  place-items: center;
   color: #687782;
   font-size: 13px;
   font-weight: 800;
@@ -882,6 +880,10 @@ h3 {
   color: #26343d;
   background: #ffffff;
   border: 1px solid #dce5e8;
+}
+
+.playback-actions .reset-button {
+  grid-column: 1 / -1;
 }
 
 .insight-list,

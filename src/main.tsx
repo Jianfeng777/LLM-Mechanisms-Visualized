@@ -116,7 +116,7 @@ const fallbackConcepts: Record<string, Concept> = {
     keywords: ["函数调用", "参数校验", "工具结果", "代理流程"],
     controls: ["工具白名单", "参数校验", "重试"],
     prerequisiteIds: ["token-stream", "context-window"],
-    relatedNextIds: ["rag-retrieval"]
+    relatedNextIds: []
   },
   "attention-flow": {
     id: "attention-flow",
@@ -147,7 +147,7 @@ const fallbackConcepts: Record<string, Concept> = {
     keywords: ["低秩分解", "参数高效微调", "适配器", "模型部署"],
     controls: ["rank", "alpha", "dropout"],
     prerequisiteIds: ["attention-flow"],
-    relatedNextIds: ["attention-flow"]
+    relatedNextIds: []
   }
 };
 
@@ -248,6 +248,10 @@ function App() {
     selectedCourse.chapters.find((chapter) => chapter.conceptIds.includes(selected.id)) || selectedCourse.chapters[0];
   const prerequisiteIds = selected.prerequisiteIds || [];
   const relatedNextIds = selected.relatedNextIds || [];
+  const totalSteps = Math.max(selected.timeline.length, selected.stages.length, 1);
+  const currentStep = Math.min(cursor, totalSteps - 1);
+  const tokenVisibleCount =
+    totalSteps <= 1 ? selected.tokens.length : Math.ceil(((currentStep + 1) / totalSteps) * selected.tokens.length);
   const relatedCourses = useMemo(
     () =>
       courses
@@ -320,10 +324,17 @@ function App() {
   useEffect(() => {
     if (!isPlaying) return;
     const timer = window.setInterval(() => {
-      setCursor((current) => (current + 1) % selected.tokens.length);
+      setCursor((current) => {
+        if (current >= totalSteps - 1) {
+          window.clearInterval(timer);
+          setIsPlaying(false);
+          return current;
+        }
+        return current + 1;
+      });
     }, 720);
     return () => window.clearInterval(timer);
-  }, [isPlaying, selected.tokens.length]);
+  }, [isPlaying, totalSteps]);
 
   const toggleCourse = (courseId: string) => {
     setExpandedCourseIds((current) =>
@@ -369,12 +380,12 @@ function App() {
   };
 
   const stepBackward = () => {
-    setCursor((current) => (current - 1 + selected.timeline.length) % selected.timeline.length);
+    setCursor((current) => Math.max(0, current - 1));
     setIsPlaying(false);
   };
 
   const stepForward = () => {
-    setCursor((current) => (current + 1) % selected.timeline.length);
+    setCursor((current) => Math.min(totalSteps - 1, current + 1));
     setIsPlaying(false);
   };
 
@@ -489,28 +500,16 @@ function App() {
               <span className="empty-chip">无</span>
             )}
           </div>
-          <details
-            className="post-menu"
-            onToggle={(event) => {
-              if (relatedCourses.length === 0) {
-                event.currentTarget.open = false;
-              }
-            }}
-          >
-            <summary
-              className={relatedCourses.length === 0 ? "post-trigger disabled" : "post-trigger"}
-              onClick={(event) => {
-                if (relatedCourses.length === 0) {
-                  event.preventDefault();
-                }
-              }}
-            >
+          <details className="post-menu">
+            <summary className={relatedCourses.length === 0 ? "post-trigger empty" : "post-trigger"}>
               后置知识点
               <ChevronDown size={15} />
             </summary>
-            {relatedCourses.length > 0 && (
-              <div className="post-panel">
-                {relatedCourses.map((course) => (
+            <div className="post-panel">
+              {relatedCourses.length === 0 ? (
+                <div className="post-empty">无</div>
+              ) : (
+                relatedCourses.map((course) => (
                   <section className="post-course-block" key={course.id}>
                     <h3>{course.title}</h3>
                     <div className="post-chapter-blocks">
@@ -528,9 +527,9 @@ function App() {
                       ))}
                     </div>
                   </section>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </details>
         </div>
 
@@ -546,7 +545,7 @@ function App() {
 
             <div className="token-stream">
               {selected.tokens.map((token, index) => (
-                <span key={`${token}-${index}`} className={index <= cursor ? "token visible" : "token"}>
+                <span key={`${token}-${index}`} className={index < tokenVisibleCount ? "token visible" : "token"}>
                   {token}
                 </span>
               ))}
@@ -555,9 +554,9 @@ function App() {
 
             <div className="probability-lanes">
               {selected.tokens.slice(0, 7).map((token, index) => (
-                <div className={`lane ${index === cursor % 7 ? "hot" : ""}`} key={`${token}-lane-${index}`}>
+                <div className={`lane ${index === currentStep % 7 ? "hot" : ""}`} key={`${token}-lane-${index}`}>
                   <span>{token}</span>
-                  <div style={{ width: `${44 + ((index + cursor) % 5) * 10}%` }} />
+                  <div style={{ width: `${index === currentStep % 7 ? 78 : 44 + (index % 4) * 9}%` }} />
                 </div>
               ))}
             </div>
@@ -574,7 +573,7 @@ function App() {
 
             <div className="mechanism-flow">
               {selected.stages.map((stage, index) => (
-                <article className={index <= cursor % selected.stages.length ? "flow-step active" : "flow-step"} key={stage}>
+                <article className={index === currentStep ? "flow-step active" : "flow-step"} key={stage}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{stage}</strong>
                 </article>
@@ -592,8 +591,8 @@ function App() {
           </div>
           <div className="timeline-track">
             {selected.timeline.map((item, index) => {
-              const isDone = index < cursor % selected.timeline.length;
-              const isCurrent = index === cursor % selected.timeline.length;
+              const isDone = index < currentStep;
+              const isCurrent = index === currentStep;
               return (
                 <button
                   className={`timeline-step ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}`}
@@ -662,11 +661,7 @@ function App() {
               <ChevronRight size={16} />
               下一步
             </button>
-            <button onClick={() => setIsPlaying(false)}>
-              <Pause size={16} />
-              暂停
-            </button>
-            <button onClick={resetPlayback}>
+            <button className="reset-button" onClick={resetPlayback}>
               <RotateCcw size={16} />
               重置
             </button>
